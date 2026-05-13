@@ -9,6 +9,7 @@ import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
 import ChangePassword from './pages/ChangePassword'
 import MyTasks from './pages/MyTasks'
+import TeamTasks from './pages/TeamTasks'
 import TaskExecutionDetail from './pages/TaskExecutionDetail'
 import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
 
@@ -52,7 +53,21 @@ function App() {
             <Layout><ChecklistExecutionDetail /></Layout>
           </ProtectedRoute>
         } />
-        
+        <Route path="/team-tasks" element={
+          <ProtectedRoute>
+            <Layout><TeamTasks /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/team-tasks/:taskExecutionId" element={
+          <ProtectedRoute>
+            <Layout><TaskExecutionDetail readOnly={true} /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/team-tasks/:taskExecutionId/checklist/:checklistExecutionId" element={
+          <ProtectedRoute>
+            <Layout><ChecklistExecutionDetail readOnly={true} /></Layout>
+          </ProtectedRoute>
+        } />
       </Routes>
       <Toaster
         position="top-right"

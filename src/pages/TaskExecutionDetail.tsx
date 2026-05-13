@@ -13,9 +13,13 @@ import { ActionButton } from '../components/ui/ActionButton'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
+interface TaskExecutionDetailProps {
+  readOnly?: boolean
+}
+
 type EffectiveStatus = 'not_started' | 'in_progress' | 'completed'
 
-const TaskExecutionDetail: React.FC = () => {
+const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = false }) => {
   const { taskExecutionId } = useParams<{ taskExecutionId: string }>()
   const navigate = useNavigate()
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -143,8 +147,8 @@ const TaskExecutionDetail: React.FC = () => {
         ? 'in_progress'
         : 'not_started'
 
-  const isLocked = effectiveStatus === 'completed'
-  const isReadOnly = effectiveStatus !== 'in_progress'
+  const isLocked = effectiveStatus === 'completed' || readOnly
+  const isReadOnly = effectiveStatus !== 'in_progress' || readOnly
 
   // Get current userId from token
   const getCurrentUserId = (): number | null => {
@@ -260,12 +264,17 @@ const TaskExecutionDetail: React.FC = () => {
     setIsUploading(false)
   }
 
+  // Navigate back based on readOnly mode
+  const goBack = () => {
+    navigate(readOnly ? '/team-tasks' : '/my-tasks')
+  }
+
   // Loading state
   if (isLoadingTask) {
     return (
       <div className="space-y-6">
-        <button onClick={() => navigate('/my-tasks')} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
-          ← Back to My Tasks
+        <button onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+          ← Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
         </button>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -278,8 +287,8 @@ const TaskExecutionDetail: React.FC = () => {
   if (taskError || !taskExecution) {
     return (
       <div className="space-y-6">
-        <button onClick={() => navigate('/my-tasks')} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
-          ← Back to My Tasks
+        <button onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
+          ← Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
         </button>
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
           <p className="text-destructive text-sm">{taskError || 'Task execution not found'}</p>
@@ -296,10 +305,10 @@ const TaskExecutionDetail: React.FC = () => {
     <div className="space-y-6">
       {/* Back button */}
       <button
-        onClick={() => navigate('/my-tasks')}
+        onClick={goBack}
         className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
       >
-        ← Back to My Tasks
+        ← Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
       </button>
 
       {/* Task Info Card */}
@@ -347,8 +356,7 @@ const TaskExecutionDetail: React.FC = () => {
       <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-lg font-semibold">Task Notes</h2>
-          {isLocked && <span className="text-xs text-muted-foreground">🔒 Locked</span>}
-          {effectiveStatus === 'not_started' && <span className="text-xs text-muted-foreground">Start the task to add notes</span>}
+          {isLocked && <span className="text-xs text-muted-foreground">🔒 Read-only</span>}
         </div>
         <textarea
           value={taskNotes}
@@ -358,7 +366,7 @@ const TaskExecutionDetail: React.FC = () => {
           disabled={isReadOnly}
           className="w-full p-3 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y disabled:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
         />
-        {effectiveStatus === 'in_progress' && (
+        {effectiveStatus === 'in_progress' && !readOnly && (
           <div className="flex justify-end mt-3">
             <button
               onClick={handleSaveNotes}
@@ -390,8 +398,8 @@ const TaskExecutionDetail: React.FC = () => {
             )}
           </h2>
 
-          {/* Upload button — only when in_progress */}
-          {effectiveStatus === 'in_progress' && (
+          {/* Upload button — only when in_progress and not readOnly */}
+          {effectiveStatus === 'in_progress' && !readOnly && (
             <div>
               <input
                 ref={fileInputRef}
@@ -411,7 +419,9 @@ const TaskExecutionDetail: React.FC = () => {
             </div>
           )}
 
-          {effectiveStatus !== 'in_progress' && (
+          {readOnly ? (
+            <span className="text-xs text-muted-foreground">🔒 Read-only view</span>
+          ) : effectiveStatus !== 'in_progress' && (
             <span className="text-xs text-muted-foreground">
               {isLocked ? '🔒 Locked' : 'Start the task to upload files'}
             </span>
@@ -468,8 +478,8 @@ const TaskExecutionDetail: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Remove button — only when in_progress */}
-                  {effectiveStatus === 'in_progress' && (
+                  {/* Remove button — only when in_progress and not readOnly */}
+                  {effectiveStatus === 'in_progress' && !readOnly && (
                     <button
                       onClick={() => setDeleteConfirmId(evidence.taskEvidenceId)}
                       className="absolute top-1 right-1 w-5 h-5 bg-destructive/80 text-destructive-foreground rounded-full flex items-center justify-center text-xs"
@@ -491,8 +501,8 @@ const TaskExecutionDetail: React.FC = () => {
           <h2 className="text-base font-semibold text-foreground">Activity</h2>
         </div>
         <div className="p-6">
-          {/* Action section — hide when there are checklist items */}
-          {(!checklistExecutions || checklistExecutions.length === 0) && (
+          {/* Action section — hide when there are checklist items or readOnly */}
+          {!readOnly && (!checklistExecutions || checklistExecutions.length === 0) && (
             <div className="mb-6 pb-6 border-b border-border">
               {effectiveStatus === 'not_started' && (
                 <div className="text-center">
@@ -653,7 +663,10 @@ const TaskExecutionDetail: React.FC = () => {
                 return (
                   <button
                     key={cl.taskChecklistExecutionId}
-                    onClick={() => navigate(`/my-tasks/${taskExecutionId}/checklist/${cl.taskChecklistExecutionId}`)}
+                    onClick={() => navigate(readOnly
+                      ? `/team-tasks/${taskExecutionId}/checklist/${cl.taskChecklistExecutionId}`
+                      : `/my-tasks/${taskExecutionId}/checklist/${cl.taskChecklistExecutionId}`
+                    )}
                     className="w-full text-left border border-border rounded-lg p-4 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group"
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">
@@ -725,8 +738,8 @@ const TaskExecutionDetail: React.FC = () => {
         <span>Updated: {new Date(taskExecution.updatedAt).toLocaleString()}</span>
       </div>
 
-      {/* ==== Complete Confirmation Modal ==== */}
-      {showCompleteConfirm && (
+      {/* ==== Complete Confirmation Modal — hidden when readOnly */}
+      {!readOnly && showCompleteConfirm && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setShowCompleteConfirm(false)}
@@ -767,8 +780,8 @@ const TaskExecutionDetail: React.FC = () => {
         </div>
       )}
 
-      {/* ==== Delete Evidence Confirmation Modal ==== */}
-      {deleteConfirmId !== null && (
+      {/* ==== Delete Evidence Confirmation Modal — hidden when readOnly */}
+      {!readOnly && deleteConfirmId !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setDeleteConfirmId(null)}

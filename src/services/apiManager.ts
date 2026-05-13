@@ -115,6 +115,70 @@ export const onboardingService = {
       throw new Error(errorMessage)
     }
   },
+
+  /**
+   * Get all users assigned to a store
+   */
+  async getStoreUsers(storeId: number): Promise<StoreUsersDto> {
+    try {
+      const response = await onboardingApi.get<ApiResponse<StoreUsersDto>>(`/user-stores/store/${storeId}`)
+      if (!response.data.data) {
+        throw new Error('Store users not found')
+      }
+      return response.data.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch store users'
+      throw new Error(errorMessage)
+    }
+  },
+}
+
+export interface StoreUserDetail {
+  userId: number
+  userName: string
+  firstName: string
+  middleName?: string
+  lastName: string
+  emailId?: string
+  mobile?: string
+  isActive: boolean
+  role: {
+    roleId: number
+    roleName: string
+  }
+}
+
+export interface StoreUserMapping {
+  userStoreId: number
+  isActive: boolean
+  assignedAt: string
+  unAssignedAt: string | null
+  createdAt: string
+  updatedAt: string
+}
+
+export interface StoreUserItem {
+  user: StoreUserDetail
+  mapping: StoreUserMapping
+}
+
+export interface StoreInfo {
+  storeId: number
+  storeName: string
+  storeCode: string
+  storeImageUrl?: string
+  addressLine1: string
+  addressLine2?: string
+  country: string
+  state: string
+  city: string
+  pinCode: string
+  isActive: boolean
+}
+
+export interface StoreUsersDto {
+  store: StoreInfo
+  users: StoreUserItem[]
 }
 
 export const taskService = {
@@ -296,6 +360,66 @@ export const taskService = {
     try {
       const response = await taskApi.get<ApiResponse<TaskExecution[]>>(`/task-executions/historical-task/${date}`, {
         params: { storeId },
+      })
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch historical tasks'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get all task executions with filters (for team view)
+   */
+  async getAllTaskExecutions(filters: {
+    storeId?: number
+    userId?: number
+    executionDateFrom?: string
+    executionDateTo?: string
+    executionStatus?: string
+  }): Promise<ApiResponse<TaskExecution[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TaskExecution[]>>('/task-executions', {
+        params: filters,
+      })
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch task executions'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get all task executions for a specific date (for team view)
+   */
+  async getTodaysTasksByStore(storeId: number, userId?: number): Promise<ApiResponse<TaskExecution[]>> {
+    try {
+      const today = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Kolkata' })
+      const params: Record<string, string | number> = { storeId, executionDateFrom: today, executionDateTo: today }
+      if (userId) {
+        params.userId = userId
+      }
+      const response = await taskApi.get<ApiResponse<TaskExecution[]>>('/task-executions', {
+        params,
+      })
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch today\'s tasks'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get historical task executions by date for team view
+   */
+  async getHistoricalTasksByStore(storeId: number, date: string, userId?: number): Promise<ApiResponse<TaskExecution[]>> {
+    try {
+      const params: Record<string, string | number> = { storeId, executionDateFrom: date, executionDateTo: date }
+      if (userId) {
+        params.userId = userId
+      }
+      const response = await taskApi.get<ApiResponse<TaskExecution[]>>('/task-executions', {
+        params,
       })
       return response.data
     } catch (error: unknown) {

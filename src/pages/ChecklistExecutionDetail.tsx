@@ -10,9 +10,13 @@ import { ActionButton } from '../components/ui/ActionButton'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
+interface ChecklistExecutionDetailProps {
+  readOnly?: boolean
+}
+
 type EffectiveStatus = 'not_started' | 'in_progress' | 'completed'
 
-const ChecklistExecutionDetail: React.FC = () => {
+const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ readOnly = false }) => {
   const { taskExecutionId, checklistExecutionId } = useParams<{
     taskExecutionId: string
     checklistExecutionId: string
@@ -98,8 +102,8 @@ const ChecklistExecutionDetail: React.FC = () => {
         ? 'in_progress'
         : 'not_started'
 
-  const isLocked = effectiveStatus === 'completed'
-  const isReadOnly = effectiveStatus !== 'in_progress'
+  const isLocked = effectiveStatus === 'completed' || readOnly
+  const isReadOnly = effectiveStatus !== 'in_progress' || readOnly
 
   // Get current userId from token
   const getCurrentUserId = (): number | null => {
@@ -207,12 +211,21 @@ const ChecklistExecutionDetail: React.FC = () => {
     setIsUploading(false)
   }
 
+  // Navigate back based on readOnly mode
+  const goBack = () => {
+    if (readOnly) {
+      navigate(taskExecutionId ? `/team-tasks/${taskExecutionId}` : '/team-tasks')
+    } else {
+      navigate(taskExecutionId ? `/my-tasks/${taskExecutionId}` : '/my-tasks')
+    }
+  }
+
   // Loading
   if (isLoading) {
     return (
       <div className="space-y-6">
         <button
-          onClick={() => navigate(`/my-tasks/${taskExecutionId}`)}
+          onClick={goBack}
           className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
           ← Back to Task
@@ -229,7 +242,7 @@ const ChecklistExecutionDetail: React.FC = () => {
     return (
       <div className="space-y-6">
         <button
-          onClick={() => navigate(`/my-tasks/${taskExecutionId}`)}
+          onClick={goBack}
           className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
           ← Back to Task
@@ -246,7 +259,7 @@ const ChecklistExecutionDetail: React.FC = () => {
       {/* Header with back */}
       <div className="flex items-center justify-between">
         <button
-          onClick={() => navigate(`/my-tasks/${taskExecutionId}`)}
+          onClick={goBack}
           className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
         >
           ← Back to Task
@@ -324,7 +337,7 @@ const ChecklistExecutionDetail: React.FC = () => {
                 Mapped Task
               </label>
               <button
-                onClick={() => navigate(`/my-tasks/${taskExecutionId}`)}
+                onClick={goBack}
                 className="text-sm text-primary hover:underline"
               >
                 View Task #{taskExecutionId}
@@ -338,8 +351,7 @@ const ChecklistExecutionDetail: React.FC = () => {
       <div className="bg-card border border-border rounded-lg shadow-sm">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">Notes</h2>
-          {isLocked && <span className="text-xs text-muted-foreground">🔒 Locked</span>}
-          {effectiveStatus === 'not_started' && <span className="text-xs text-muted-foreground">Start the task to add notes</span>}
+          {isLocked && <span className="text-xs text-muted-foreground">🔒 Read-only</span>}
         </div>
         <div className="p-6">
           <textarea
@@ -350,7 +362,7 @@ const ChecklistExecutionDetail: React.FC = () => {
             disabled={isReadOnly}
             className="w-full p-3 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y disabled:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
           />
-          {effectiveStatus === 'in_progress' && (
+          {effectiveStatus === 'in_progress' && !readOnly && (
             <div className="flex justify-end mt-3">
               <button
                 onClick={handleSaveNotes}
@@ -383,8 +395,8 @@ const ChecklistExecutionDetail: React.FC = () => {
             )}
           </h2>
 
-          {/* Upload button — only when in_progress */}
-          {effectiveStatus === 'in_progress' && (
+          {/* Upload button — only when in_progress and not readOnly */}
+          {effectiveStatus === 'in_progress' && !readOnly && (
             <div>
               <input
                 ref={fileInputRef}
@@ -404,7 +416,9 @@ const ChecklistExecutionDetail: React.FC = () => {
             </div>
           )}
 
-          {effectiveStatus !== 'in_progress' && (
+          {readOnly ? (
+            <span className="text-xs text-muted-foreground">🔒 Read-only view</span>
+          ) : effectiveStatus !== 'in_progress' && (
             <span className="text-xs text-muted-foreground">
               {isLocked ? '🔒 Locked' : 'Start the task to upload files'}
             </span>
@@ -461,8 +475,8 @@ const ChecklistExecutionDetail: React.FC = () => {
                     </p>
                   </div>
 
-                  {/* Remove button — only when in_progress */}
-                  {effectiveStatus === 'in_progress' && (
+                  {/* Remove button — only when in_progress and not readOnly */}
+                  {effectiveStatus === 'in_progress' && !readOnly && (
                     <button
                       onClick={() => setDeleteConfirmId(evidence.taskEvidenceId)}
                       className="absolute top-1 right-1 w-8 h-8 bg-destructive/80 text-destructive-foreground rounded-full flex items-center justify-center text-xs"
@@ -484,7 +498,8 @@ const ChecklistExecutionDetail: React.FC = () => {
           <h2 className="text-base font-semibold text-foreground">Activity</h2>
         </div>
         <div className="p-6">
-          {/* Action section */}
+          {/* Action section — hidden when readOnly */}
+          {!readOnly && (
           <div className="mb-6 pb-6 border-b border-border">
             {effectiveStatus === 'not_started' && (
               <div className="text-center">
@@ -540,6 +555,7 @@ const ChecklistExecutionDetail: React.FC = () => {
               </div>
             )}
           </div>
+          )}
 
           {/* Timeline section */}
           <div className="mb-6 pb-6 border-b border-border">
@@ -611,8 +627,8 @@ const ChecklistExecutionDetail: React.FC = () => {
         <span>Updated: {new Date(checklistExecution.updatedAt).toLocaleString()}</span>
       </div>
 
-      {/* ==== Complete Confirmation Modal ==== */}
-      {showCompleteConfirm && (
+      {/* ==== Complete Confirmation Modal — hidden when readOnly */}
+      {!readOnly && showCompleteConfirm && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setShowCompleteConfirm(false)}
@@ -653,8 +669,8 @@ const ChecklistExecutionDetail: React.FC = () => {
         </div>
       )}
 
-      {/* ==== Delete Evidence Confirmation Modal ==== */}
-      {deleteConfirmId !== null && (
+      {/* ==== Delete Evidence Confirmation Modal — hidden when readOnly */}
+      {!readOnly && deleteConfirmId !== null && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setDeleteConfirmId(null)}

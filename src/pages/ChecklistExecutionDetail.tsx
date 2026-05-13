@@ -8,6 +8,8 @@ import type { EvidenceResponseDto } from '../types/evidence'
 import { getEvidenceFileIcon, isImageFile } from '../types/evidence'
 import { ActionButton } from '../components/ui/ActionButton'
 
+const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
+
 type EffectiveStatus = 'not_started' | 'in_progress' | 'completed'
 
 const ChecklistExecutionDetail: React.FC = () => {
@@ -42,6 +44,9 @@ const ChecklistExecutionDetail: React.FC = () => {
   // Complete confirmation modal
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
 
+  // Delete evidence confirmation
+  const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
+
   // Fetch checklist execution
   const fetchChecklistExecution = useCallback(async () => {
     if (!checklistExecutionId) return
@@ -74,6 +79,7 @@ const ChecklistExecutionDetail: React.FC = () => {
       }
     } catch {
       // Silently fail — evidence is optional
+      setEvidenceList([]);
     } finally {
       setIsLoadingEvidence(false)
     }
@@ -430,13 +436,12 @@ const ChecklistExecutionDetail: React.FC = () => {
                   {isImageFile(evidence.mimeType) ? (
                     <button
                       onClick={() => {
-                        const backendUrl = import.meta.env.VITE_TASK_API_BASE_URL || ''
-                        setPreviewImage(`${backendUrl}${evidence.evidenceUrl}`)
+                        setPreviewImage(`${fileUploadBaseUrl}/${evidence.evidenceUrl}`)
                       }}
                       className="w-full aspect-square overflow-hidden bg-muted"
                     >
                       <img
-                        src={`${import.meta.env.VITE_TASK_API_BASE_URL || ''}${evidence.evidenceUrl}`}
+                        src={`${fileUploadBaseUrl}/${evidence.evidenceUrl}`}
                         alt={evidence.fileName || 'Evidence'}
                         className="w-full h-full object-cover"
                       />
@@ -459,8 +464,8 @@ const ChecklistExecutionDetail: React.FC = () => {
                   {/* Remove button — only when in_progress */}
                   {effectiveStatus === 'in_progress' && (
                     <button
-                      onClick={() => setEvidenceList(prev => prev.filter(e => e.taskEvidenceId !== evidence.taskEvidenceId))}
-                      className="absolute top-1 right-1 w-5 h-5 bg-destructive/80 text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center text-xs"
+                      onClick={() => setDeleteConfirmId(evidence.taskEvidenceId)}
+                      className="absolute top-1 right-1 w-8 h-8 bg-destructive/80 text-destructive-foreground rounded-full flex items-center justify-center text-xs"
                       title="Remove"
                     >
                       ✕
@@ -642,6 +647,54 @@ const ChecklistExecutionDetail: React.FC = () => {
                 className="px-4 py-2 text-sm bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors"
               >
                 Yes, Complete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ==== Delete Evidence Confirmation Modal ==== */}
+      {deleteConfirmId !== null && (
+        <div
+          className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
+          onClick={() => setDeleteConfirmId(null)}
+        >
+          <div
+            className="bg-card border border-border rounded-lg p-6 w-full max-w-md mx-4 shadow-lg"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
+                <svg className="w-6 h-6 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+              </div>
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">Confirm Delete</h3>
+                <p className="text-sm text-muted-foreground">Are you sure you want to delete this evidence file? This action cannot be undone.</p>
+              </div>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setDeleteConfirmId(null)}
+                className="px-4 py-2 text-sm border border-border rounded-md hover:bg-muted transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    await taskService.deleteEvidence(deleteConfirmId!)
+                    toast.success('Evidence deleted')
+                    await fetchEvidence()
+                  } catch {
+                    toast.error('Failed to delete evidence')
+                  }
+                  setDeleteConfirmId(null)
+                }}
+                className="px-4 py-2 text-sm bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
+              >
+                Yes, Delete
               </button>
             </div>
           </div>

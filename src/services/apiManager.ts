@@ -199,6 +199,57 @@ export const taskService = {
   },
 
   /**
+   * Get evidence files for a task execution
+   */
+  async getTaskEvidence(taskExecutionId: number): Promise<ApiResponse<EvidenceResponseDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<EvidenceResponseDto[]>>(`/evidence/task-execution/${taskExecutionId}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch evidence'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Delete evidence by ID
+   */
+  async deleteEvidence(taskEvidenceId: number): Promise<ApiResponse<EvidenceResponseDto>> {
+    try {
+      const response = await taskApi.delete<ApiResponse<EvidenceResponseDto>>(`/evidence/${taskEvidenceId}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete evidence'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Upload evidence file for a task execution
+   * Uses FormData with multipart/form-data content type
+   */
+  async uploadTaskEvidence(taskExecutionId: number, file: File): Promise<ApiResponse<EvidenceResponseDto>> {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+
+      const response = await taskApi.post<ApiResponse<EvidenceResponseDto>>(
+        `/evidence/task-execution/${taskExecutionId}/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      )
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload evidence'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
    * Upload evidence file for a task checklist execution
    * Uses FormData with multipart/form-data content type
    */

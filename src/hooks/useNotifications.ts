@@ -38,15 +38,10 @@ export function useNotifications(): UseNotificationsReturn {
   const messagingSupported =
     'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window
 
-  // Forground message handler to show toast notifications when app is open
+  // ─── Foreground message listener (app focused) ──────────────────────────────
+  // Firebase onMessage only fires when the tab is active and focused.
   useEffect(() => {
-    
-console.log('[useNotifications] Initializing notifications hook. Messaging supported:', messagingSupported);
-console.log('[useNotifications] Current permission:', permission);
-console.log('[useNotifications] Current token:', token ? token.substring(0, 20) + '...' : null);
-console.log('[useNotifications] Firebase messaging object:', messaging);
-
-    if (!messaging){
+    if (!messaging) {
       console.warn('[useNotifications] Firebase messaging is not initialized — cannot set up onMessage listener')
       return
     }
@@ -70,6 +65,31 @@ console.log('[useNotifications] Firebase messaging object:', messaging);
 
     return () => {
       unsubscribe()
+    }
+  }, [])
+
+  // ─── SW postMessage listener (app open but not focused) ─────────────────────
+  // The SW broadcasts FCM_MESSAGE to all open windows on every push event.
+  // We show a toast here only when the tab is NOT focused — if focused,
+  // onMessage() above already handles it to avoid duplicate toasts.
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return
+
+    const handleSWMessage = (event: MessageEvent) => {
+      if (event.data?.type !== 'FCM_MESSAGE') return
+      if (document.hasFocus()) return // onMessage() handles it when tab is focused
+
+      console.log('[useNotifications] ✅ SW postMessage received (app not focused):', event.data)
+
+      const { title = 'New Notification', body = '' } = event.data
+      toast.success(`${title}${body ? `: ${body}` : ''}`, {
+        duration: 5000,
+      })
+    }
+
+    navigator.serviceWorker.addEventListener('message', handleSWMessage)
+    return () => {
+      navigator.serviceWorker.removeEventListener('message', handleSWMessage)
     }
   }, [])
 

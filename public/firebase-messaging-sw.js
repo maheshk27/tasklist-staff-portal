@@ -82,6 +82,17 @@ self.addEventListener('push', (event) => {
         (client) => client.visibilityState === 'visible' && client.focused
       )
 
+      // Always broadcast to all open app windows so they can show an in-app toast
+      // even when the tab is open but not focused.
+      windowClients.forEach((client) => {
+        client.postMessage({
+          type: 'FCM_MESSAGE',
+          title: notificationTitle,
+          body: notificationBody,
+          data: notificationData,
+        })
+      })
+
       if (isFocused) {
         console.log('📡 [SW:push] App is focused — skipping OS notification (toast will show in app)')
         return Promise.resolve()

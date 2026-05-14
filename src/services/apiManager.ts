@@ -4,7 +4,7 @@
  */
 
 import { decodeToken, getStoredTokens } from '../utils/auth'
-import { onboardingApi, taskApi } from './api'
+import { onboardingApi, taskApi, notificationApi } from './api'
 import type { LoginRequest, AuthResponse, User } from '../types/auth'
 import type { UserStoresResponseDto } from '../types/user-store'
 import type { TaskExecution } from '../types/task-execution'
@@ -425,6 +425,28 @@ export const taskService = {
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch historical tasks'
       throw new Error(errorMessage)
+    }
+  },
+}
+
+export const notificationService = {
+  /**
+   * Register or update an FCM token for the current user's device.
+   * This saves the token to the backend's UserDevice table so the
+   * backend can look it up when sending push notifications.
+   */
+  async registerDevice(userId: number, fcmToken: string): Promise<void> {
+    try {
+      await notificationApi.post('/notifications/register-device', {
+        userId,
+        fcmToken,
+        deviceInfo: `web/${navigator.userAgent.substring(0, 100)}`,
+      })
+      console.log('[notificationService] ✅ Device registered with backend')
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to register device'
+      console.error('[notificationService] ❌ Failed to register device:', errorMessage)
+      // Don't throw — token registration failure shouldn't break the app
     }
   },
 }

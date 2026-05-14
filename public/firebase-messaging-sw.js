@@ -1,9 +1,9 @@
-// Version: 1.4.0 - Added push handler with proper event.waitUntil for reliable delivery
-// Uses Firebase compat SDK v12.13.0 matching app.
+// Version: 3.0.0
+// Strategy: Handle ALL push events via the raw 'push' event listener.
+// Firebase compat SDK is initialized only for onBackgroundMessage as a fallback.
 importScripts('https://www.gstatic.com/firebasejs/12.13.0/firebase-app-compat.js')
 importScripts('https://www.gstatic.com/firebasejs/12.13.0/firebase-messaging-compat.js')
 
-// NOTE: These must match staff-portal/.env.development-local EXACTLY
 const firebaseConfig = {
   apiKey: 'AIzaSyDKu5onCIp6eQWAmpOOog420RIVY5D_HaM',
   authDomain: 'matrimony-smirks.firebaseapp.com',
@@ -15,87 +15,108 @@ const firebaseConfig = {
 }
 
 firebase.initializeApp(firebaseConfig)
-
 const messaging = firebase.messaging()
 
-console.log('📡 Firebase messaging service worker initialized:', firebaseConfig.projectId)
+console.log('📡 [SW v3.0.0] Firebase messaging SW initialized')
 
 // ============================================================
-// Firebase SDK onBackgroundMessage
-// ============================================================
-messaging.onBackgroundMessage((payload) => {
-  console.log('🔔 [onBackgroundMessage] Message received:', payload)
-  showNotificationFromPayload(payload)
-})
-
-// ============================================================
-// Raw push event handler — catches ALL push messages including
-// those that Firebase onBackgroundMessage might not fire for.
-// Uses event.waitUntil to keep SW alive during notification display.
+// PRIMARY: Raw push event handler
+// Fires for EVERY push delivered to this SW registration.
+// This is the most reliable handler — works for both
+// notification messages and data-only messages.
 // ============================================================
 self.addEventListener('push', (event) => {
-  console.log('📡 [push] Raw push event received')
+  console.log('📡 [SW:push] Raw push event received')
 
-  let payload = null
+  let notificationTitle = 'New Message'
+  let notificationBody = 'You have a new notification'
+  let notificationData = {}
 
   if (event.data) {
     try {
-      payload = event.data.json()
-      console.log('📡 [push] Parsed push payload:', payload)
+      const payload = event.data.json()
+      console.log('📡 [SW:push] Parsed payload:', JSON.stringify(payload))
+
+      // FCM sends data-only messages with content inside payload.data
+      // Notification messages have payload.notification AND payload.data
+      notificationTitle =
+        payload.data?.title ||
+        payload.notification?.title ||
+        payload.title ||
+        notificationTitle
+
+      notificationBody =
+        payload.data?.body ||
+        payload.notification?.body ||
+        payload.body ||
+        notificationBody
+
+      notificationData = payload.data || {}
     } catch (e) {
-      console.log('📡 [push] Non-JSON push data:', event.data.text())
+      console.warn('📡 [SW:push] Could not parse push data as JSON:', e)
+      try {
+        notificationBody = event.data.text() || notificationBody
+      } catch (_) {}
     }
   }
 
-  if (payload) {
-    event.waitUntil(showNotificationFromPayload(payload))
-  }
-})
-
-// ============================================================
-// Helper: Extract notification info from FCM payload and display it
-// ============================================================
-function showNotificationFromPayload(payload) {
-  console.log('� showNotificationFromPayload called with:', payload)
-
-  const notificationTitle = payload.notification?.title ||
-                            payload.data?.title ||
-                            payload.title ||
-                            'New Message'
-
-  const notificationBody = payload.notification?.body ||
-                           payload.data?.body ||
-                           payload.body ||
-                           'You have a new notification'
-
-  const notificationOptions = {
+  const options = {
     body: notificationBody,
     icon: '/rk-logo.png',
     badge: '/rk-logo.png',
-    tag: payload.data?.tag || payload.tag || `fcm-${Date.now()}`,
-    data: payload.data || payload,
+    tag: notificationData.tag || `fcm-${Date.now()}`,
+    data: notificationData,
     vibrate: [200, 100, 200],
-    requireInteraction: false,
+    requireInteraction: true,
   }
 
-  console.log('📢 Showing notification:', { title: notificationTitle, ...notificationOptions })
+  console.log('📢 [SW:push] Showing notification:', notificationTitle, options.body)
 
-  try {
-    self.registration.showNotification(notificationTitle, notificationOptions)
-    console.log('✅ Notification shown successfully')
-    return Promise.resolve(true)
-  } catch (error) {
-    console.error('❌ Failed to show notification:', error)
-    return Promise.resolve(false)
-  }
-}
+  // Check if any app window is currently focused.
+  // If focused → the React app's onMessage() handler will show a toast,
+  // so we skip the OS notification to avoid duplicates.
+  // If not focused → show the OS notification so the user is alerted.
+  event.waitUntil(
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      const isFocused = windowClients.some(
+        (client) => client.visibilityState === 'visible' && client.focused
+      )
+
+      if (isFocused) {
+        console.log('📡 [SW:push] App is focused — skipping OS notification (toast will show in app)')
+        return Promise.resolve()
+      }
+
+      console.log('📡 [SW:push] App not focused — showing OS notification')
+      return self.registration.showNotification(notificationTitle, options)
+        .then(() => console.log('✅ [SW:push] Notification shown'))
+        .catch((err) => console.error('❌ [SW:push] Failed to show notification:', err))
+    })
+  )
+})
+
+// ============================================================
+// SECONDARY: Firebase SDK onBackgroundMessage
+// Only fires when the page is NOT focused/open.
+// Kept as a fallback — if the raw push event above already
+// showed a notification, this may show a duplicate (rare).
+// ============================================================
+messaging.onBackgroundMessage((payload) => {
+  console.log('🔔 [SW:onBackgroundMessage] Received:', JSON.stringify(payload))
+  // The raw push handler above already shows the notification,
+  // so we skip here to avoid duplicates.
+  // If you want onBackgroundMessage as the sole handler, remove
+  // the self.addEventListener('push', ...) block above.
+})
 
 // ============================================================
 // Notification click handler
 // ============================================================
 self.addEventListener('notificationclick', (event) => {
-  console.log('👆 Notification clicked:', event.notification.tag)
+  console.log('👆 [SW] Notification clicked:', event.notification.tag)
   event.notification.close()
+
+  const screenPath = event.notification.data?.screenPath || '/'
 
   event.waitUntil(
     clients.matchAll({ type: 'window', includeUncontrolled: true })
@@ -106,25 +127,25 @@ self.addEventListener('notificationclick', (event) => {
           }
         }
         if (clients.openWindow) {
-          return clients.openWindow('/')
+          return clients.openWindow(screenPath)
         }
       })
   )
 })
 
 // ============================================================
-// Lifecycle: activate immediately
+// Lifecycle
 // ============================================================
-self.addEventListener('install', () => {
-  console.log('🔥 Service Worker installing, skipping wait...')
+self.addEventListener('install', (event) => {
+  console.log('🔥 [SW] Installing v3.0.0, skipping wait...')
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
-  console.log('🔥 Service Worker activating, claiming clients...')
+  console.log('🔥 [SW] Activating v3.0.0, claiming clients...')
   event.waitUntil(
     clients.claim()
-      .then(() => console.log('✅ Clients claimed'))
-      .catch((err) => console.error('❌ Failed to claim clients:', err))
+      .then(() => console.log('✅ [SW] Clients claimed'))
+      .catch((err) => console.error('❌ [SW] Failed to claim clients:', err))
   )
 })

@@ -7,6 +7,7 @@ import Login from './modules/auth/pages/Login'
 import ForgotPassword from './modules/auth/pages/ForgotPassword'
 import Dashboard from './pages/Dashboard'
 import Profile from './pages/Profile'
+import Settings from './pages/Settings'
 import ChangePassword from './pages/ChangePassword'
 import MyTasks from './pages/MyTasks'
 import TeamTasks from './pages/TeamTasks'
@@ -31,6 +32,11 @@ function App() {
         <Route path="/profile" element={
           <ProtectedRoute>
             <Layout><Profile /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/settings" element={
+          <ProtectedRoute>
+            <Layout><Settings /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/change-password" element={

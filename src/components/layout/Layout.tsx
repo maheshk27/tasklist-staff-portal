@@ -28,6 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       icon: '👤',
       children: [
         { title: 'Profile', icon: '👤', path: '/profile' },
+        { title: 'Settings', icon: '⚙️', path: '/settings' },
         { title: 'Change Password', icon: '🔑', path: '/change-password' },
       ]
     }

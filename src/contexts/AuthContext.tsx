@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect, type ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
 import { authService } from '../services/auth'
+import { useNotifications } from '../hooks/useNotifications'
 import type { User, AuthState } from '../types/auth'
 
 interface AuthContextType {
@@ -33,6 +34,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
     error: null,
   })
+
+  const { requestPermission } = useNotifications()
 
   useEffect(() => {
     // Check if user is already authenticated on app load
@@ -84,16 +87,16 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }
 
-  const login = async (userName: string, password: string): Promise<void> => {
+  const login = useCallback(async (userName: string, password: string): Promise<void> => {
     setState(prev => ({ ...prev, isLoading: true, error: null }))
-    
+
     try {
       const response = await authService.login({ userName, password })
-      
+
       if (response.success) {
         const { accessToken, refreshToken, user } = response.data
         authService.setTokens(accessToken, refreshToken)
-        
+
         setState(prev => ({
           ...prev,
           user,
@@ -101,6 +104,14 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isLoading: false,
           error: null,
         }))
+
+        // Request notification permission after successful login
+        try {
+          await requestPermission()
+        } catch (error) {
+          console.error('Failed to request notification permission:', error)
+          // Don't fail login if notifications fail
+        }
       } else {
         throw new Error(response.message || 'Login failed')
       }
@@ -115,9 +126,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }))
       throw error
     }
-  }
+  }, [requestPermission])
 
-  const logout = async (): Promise<void> => {
+  const logout = useCallback(async (): Promise<void> => {
     try {
       await authService.logout()
     } catch (error) {
@@ -130,11 +141,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         error: null,
       }))
     }
-  }
+  }, [])
 
-  const clearError = (): void => {
+  const clearError = useCallback((): void => {
     setState(prev => ({ ...prev, error: null }))
-  }
+  }, [])
 
   const value: AuthContextType = React.useMemo(() => ({
     user: state.user,
@@ -144,7 +155,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     login,
     logout,
     clearError,
-  }), [state.user, state.isAuthenticated, state.isLoading, state.error])
+  }), [state.user, state.isAuthenticated, state.isLoading, state.error, login, logout, clearError])
 
   return (
     <AuthContext.Provider value={value}>

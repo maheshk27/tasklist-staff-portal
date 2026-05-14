@@ -15,6 +15,7 @@ import TaskExecutionDetail from './pages/TaskExecutionDetail'
 import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
 
 function App() {
+
   return (
     <AuthProvider>
       <Routes>

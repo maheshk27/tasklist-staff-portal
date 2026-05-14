@@ -5,14 +5,14 @@ importScripts('https://www.gstatic.com/firebasejs/12.13.0/firebase-app-compat.js
 importScripts('https://www.gstatic.com/firebasejs/12.13.0/firebase-messaging-compat.js')
 
 const firebaseConfig = {
-  apiKey: 'AIzaSyDKu5onCIp6eQWAmpOOog420RIVY5D_HaM',
-  authDomain: 'matrimony-smirks.firebaseapp.com',
-  projectId: 'matrimony-smirks',
-  storageBucket: 'matrimony-smirks.firebasestorage.app',
-  messagingSenderId: '82123554513',
-  appId: '1:82123554513:web:25a6b8a28868ed44ff8ff0',
-  measurementId: 'G-8F2PHS6DSM',
-}
+  apiKey: "AIzaSyAI8TWtseYRo6OFCC1HutwbHF6ubb2ibhY",
+  authDomain: "rk-bazar-aebc8.firebaseapp.com",
+  projectId: "rk-bazar-aebc8",
+  storageBucket: "rk-bazar-aebc8.firebasestorage.app",
+  messagingSenderId: "142568809640",
+  appId: "1:142568809640:web:8e8cd678e170c022c88e9d",
+  measurementId: "G-3V7YBWQJ5E"
+};
 
 firebase.initializeApp(firebaseConfig)
 const messaging = firebase.messaging()

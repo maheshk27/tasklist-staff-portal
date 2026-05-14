@@ -18,11 +18,6 @@ function getCurrentUserId(): number | null {
 }
 
 const FCM_TOKEN_KEY = 'staff_fcm_token'
-// Bump this version whenever you need to force all clients to re-register their FCM token.
-// Changing it causes every browser to delete its old token and get a fresh one
-// bound to the correct service worker.
-const FCM_TOKEN_VERSION = 'v3'
-const FCM_TOKEN_VERSION_KEY = 'staff_fcm_token_version'
 
 interface UseNotificationsReturn {
   token: string | null
@@ -43,98 +38,40 @@ export function useNotifications(): UseNotificationsReturn {
   const messagingSupported =
     'Notification' in window && 'serviceWorker' in navigator && 'PushManager' in window
 
-  // ─── Foreground message listener ────────────────────────────────────────────
+  // Forground message handler to show toast notifications when app is open
   useEffect(() => {
-    if (!messaging) return
+    
+console.log('[useNotifications] Initializing notifications hook. Messaging supported:', messagingSupported);
+console.log('[useNotifications] Current permission:', permission);
+console.log('[useNotifications] Current token:', token ? token.substring(0, 20) + '...' : null);
+console.log('[useNotifications] Firebase messaging object:', messaging);
 
-    let unsubscribe: (() => void) | null = null
-    let cancelled = false
-
-    const setup = async () => {
-      await registerMessagingSW()
-      if (cancelled) return
-
-      console.log('[useNotifications] Setting up foreground onMessage listener')
-
-      unsubscribe = onMessage(messaging!, (payload) => {
-        console.log('[useNotifications] ✅ Foreground message received:', payload)
-
-        const title =
-          payload.notification?.title ||
-          payload.data?.title ||
-          'New Notification'
-
-        const body = payload.notification?.body || payload.data?.body || ''
-
-        toast.success(`${title}${body ? `: ${body}` : ''}`, {
-          duration: 5000,
-        })
-      })
+    if (!messaging){
+      console.warn('[useNotifications] Firebase messaging is not initialized — cannot set up onMessage listener')
+      return
     }
 
-    setup().catch((err) => {
-      console.error('[useNotifications] Failed to set up onMessage listener:', err)
+    console.log('[useNotifications] Setting up foreground onMessage listener')
+
+    const unsubscribe = onMessage(messaging, (payload) => {
+      console.log('[useNotifications] ✅ Foreground message received:', payload)
+
+      const title =
+        payload.notification?.title ||
+        payload.data?.title ||
+        'New Notification'
+
+      const body = payload.notification?.body || payload.data?.body || ''
+
+      toast.success(`${title}${body ? `: ${body}` : ''}`, {
+        duration: 5000,
+      })
     })
 
     return () => {
-      cancelled = true
-      if (unsubscribe) unsubscribe()
+      unsubscribe()
     }
   }, [])
-
-  // ─── One-time token migration ────────────────────────────────────────────────
-  // If the stored token was generated with an older version (i.e. bound to
-  // Firebase's internal SW instead of ours), delete it and get a fresh one.
-  useEffect(() => {
-    if (!messagingSupported) return
-    if (permission !== 'granted') return
-
-    const storedVersion = localStorage.getItem(FCM_TOKEN_VERSION_KEY)
-    if (storedVersion === FCM_TOKEN_VERSION) return // already up to date
-
-    console.log('[useNotifications] Token version mismatch — forcing token refresh...')
-
-    const migrate = async () => {
-      // Delete the old FCM token (clears the push subscription on the old SW)
-      await forceDeleteFCMToken()
-      // Clear local storage
-      localStorage.removeItem(FCM_TOKEN_KEY)
-      setToken(null)
-
-      // Get a fresh token bound to our SW
-      const swRegistration = await registerMessagingSW()
-      if (!swRegistration || !messaging) return
-
-      const vapidKey = import.meta.env.VITE_FIREBASE_VAPID_KEY
-      if (!vapidKey) return
-
-      try {
-        const newToken = await getToken(messaging, {
-          vapidKey,
-          serviceWorkerRegistration: swRegistration,
-        })
-
-        if (newToken) {
-          console.log('[useNotifications] ✅ Migrated to new FCM token:', newToken.substring(0, 20) + '...')
-          setToken(newToken)
-          localStorage.setItem(FCM_TOKEN_KEY, newToken)
-          localStorage.setItem(FCM_TOKEN_VERSION_KEY, FCM_TOKEN_VERSION)
-
-          // Save the new token to the backend so it can send push notifications
-          const userId = getCurrentUserId()
-          if (userId) {
-            await notificationService.registerDevice(userId, newToken)
-          }
-
-          toast.success('Notification token refreshed', { duration: 4000 })
-        }
-      } catch (err) {
-        console.error('[useNotifications] Token migration failed:', err)
-      }
-    }
-
-    migrate()
-  }, [messagingSupported, permission])
 
   // ─── Get FCM token ───────────────────────────────────────────────────────────
   const getFCMTokenInternal = useCallback(async (): Promise<string | null> => {
@@ -167,7 +104,6 @@ export function useNotifications(): UseNotificationsReturn {
         console.log('[useNotifications] ✅ FCM token retrieved:', currentToken.substring(0, 20) + '...')
         setToken(currentToken)
         localStorage.setItem(FCM_TOKEN_KEY, currentToken)
-        localStorage.setItem(FCM_TOKEN_VERSION_KEY, FCM_TOKEN_VERSION)
 
         // Save token to backend so it can look it up when sending push notifications
         const userId = getCurrentUserId()
@@ -236,7 +172,6 @@ export function useNotifications(): UseNotificationsReturn {
   const disableNotifications = useCallback(() => {
     setToken(null)
     localStorage.removeItem(FCM_TOKEN_KEY)
-    localStorage.removeItem(FCM_TOKEN_VERSION_KEY)
     console.log('[useNotifications] Notifications disabled (token cleared locally)')
   }, [])
 

@@ -76,9 +76,7 @@ export async function registerMessagingSW(): Promise<ServiceWorkerRegistration |
     // Clean up Firebase's internal SW before registering ours
     await cleanupFirebaseInternalSW()
 
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js', {
-      scope: '/',
-    })
+    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
     console.log('[firebase] SW registered at scope:', registration.scope)
 
     // Wait until the SW is active

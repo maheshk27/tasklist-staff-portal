@@ -70,7 +70,6 @@ export const useNotifications = () => {
       return deleted
     } catch (error) {
       console.error('Error disabling notifications:', error)
-      toast.error(`Failed to disable notifications: ${error.message}`)
       throw error
     }
   }
@@ -104,7 +103,6 @@ export const useNotifications = () => {
       return currentToken
     } catch (error) {
       console.error('Error getting FCM token:', error)
-      toast.error(`Failed to get FCM token: ${error.message}`)
       throw error
     }
   }, [messagingSupported])

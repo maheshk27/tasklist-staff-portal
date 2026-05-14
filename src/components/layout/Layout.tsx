@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useNotifications'
+import PWAInstallPrompt from '../PWAInstallPrompt'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -27,7 +28,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Stops prompting only if user explicitly granted or denied.
   useEffect(() => {
     if (!messagingSupported) return
-    if (permission !== 'default') return // 'granted' or 'denied' → stop asking
+    if (permission !== 'default') return // 'granted' or 'denied'  stop asking
 
     const timer = setTimeout(() => {
       requestPermission()
@@ -37,16 +38,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [permission, messagingSupported, requestPermission])
 
   const menuItems: MenuItem[] = [
-    { title: 'Dashboard', icon: '📊', path: '/dashboard' },
-    { title: 'My Tasks', icon: '📋', path: '/my-tasks' },
-    { title: 'Team Tasks', icon: '👥', path: '/team-tasks' },
+    { title: 'Dashboard', icon: '', path: '/dashboard' },
+    { title: 'My Tasks', icon: '', path: '/my-tasks' },
+    { title: 'Team Tasks', icon: '', path: '/team-tasks' },
     {
       title: 'My Account',
-      icon: '👤',
+      icon: '',
       children: [
-        { title: 'Profile', icon: '👤', path: '/profile' },
-        { title: 'Settings', icon: '⚙️', path: '/settings' },
-        { title: 'Change Password', icon: '🔑', path: '/change-password' },
+        { title: 'Profile', icon: '', path: '/profile' },
+        { title: 'Settings', icon: '', path: '/settings' },
+        { title: 'Change Password', icon: '', path: '/change-password' },
       ]
     }
   ]
@@ -299,6 +300,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           </div>
         </div>
       )}
+      {/* PWA Install Prompt */}
+      <PWAInstallPrompt />
     </div>
   )
 }

@@ -1,27 +1,7 @@
-import React, { createContext, useContext, useState, useEffect, useCallback, type ReactNode } from 'react'
+import React, { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { authService } from '../services/auth'
-import { useNotifications } from '../hooks/useNotifications'
-import type { User, AuthState } from '../types/auth'
-
-interface AuthContextType {
-  user: User | null
-  isAuthenticated: boolean
-  isLoading: boolean
-  error: string | null
-  login: (userName: string, password: string) => Promise<void>
-  logout: () => Promise<void>
-  clearError: () => void
-}
-
-const AuthContext = createContext<AuthContextType | undefined>(undefined)
-
-export const useAuth = (): AuthContextType => {
-  const context = useContext(AuthContext)
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider')
-  }
-  return context
-}
+import type { AuthState } from '../types/auth'
+import { AuthContext, type AuthContextType } from './AuthContextType'
 
 interface AuthProviderProps {
   children: ReactNode
@@ -34,8 +14,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     isLoading: true,
     error: null,
   })
-
-  const { requestPermission } = useNotifications()
 
   useEffect(() => {
     // Check if user is already authenticated on app load
@@ -104,14 +82,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           isLoading: false,
           error: null,
         }))
-
-        // Request notification permission after successful login
-        try {
-          await requestPermission()
-        } catch (error) {
-          console.error('Failed to request notification permission:', error)
-          // Don't fail login if notifications fail
-        }
       } else {
         throw new Error(response.message || 'Login failed')
       }
@@ -126,7 +96,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       }))
       throw error
     }
-  }, [requestPermission])
+  }, [])
 
   const logout = useCallback(async (): Promise<void> => {
     try {

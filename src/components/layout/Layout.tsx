@@ -1,6 +1,7 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import { Link, useLocation } from 'react-router-dom'
-import { useAuth } from '../../contexts/AuthContext'
+import { useAuth } from '../../hooks/useAuth'
+import { useNotifications } from '../../hooks/useNotifications'
 
 interface LayoutProps {
   children: React.ReactNode
@@ -16,8 +17,24 @@ interface MenuItem {
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation()
   const { user, logout } = useAuth()
+  const { permission, messagingSupported, requestPermission } = useNotifications()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  // Prompt for notification permission after login.
+  // Shows the browser dialog every time this layout mounts if permission is still 'default'
+  // (i.e. user dismissed it before or hasn't been asked yet).
+  // Stops prompting only if user explicitly granted or denied.
+  useEffect(() => {
+    if (!messagingSupported) return
+    if (permission !== 'default') return // 'granted' or 'denied' → stop asking
+
+    const timer = setTimeout(() => {
+      requestPermission()
+    }, 1500)
+
+    return () => clearTimeout(timer)
+  }, [permission, messagingSupported, requestPermission])
 
   const menuItems: MenuItem[] = [
     { title: 'Dashboard', icon: '📊', path: '/dashboard' },

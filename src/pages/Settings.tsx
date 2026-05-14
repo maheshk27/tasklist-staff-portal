@@ -1,6 +1,6 @@
 import React from 'react'
-import { useNotifications } from '../hooks/useNotifications'
 import toast from 'react-hot-toast'
+import { useNotifications } from '../hooks/useNotifications'
 
 const Settings: React.FC = () => {
   const { token, permission, messagingSupported, requestPermission, getFCMToken, disableNotifications } = useNotifications()

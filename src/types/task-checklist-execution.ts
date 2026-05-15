@@ -67,3 +67,11 @@ export const CHECKLIST_STATUS_COLORS: Record<ChecklistStatus, string> = {
   SKIPPED: 'bg-orange-100 text-orange-800',
   OVERDUE: 'bg-red-100 text-red-800'
 }
+
+export const ALL_CHECKLIST_STATUSES: ChecklistStatus[] = [
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'SKIPPED',
+  'OVERDUE',
+]

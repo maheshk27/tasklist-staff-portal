@@ -6,7 +6,7 @@ import { decodeToken, getStoredTokens } from '../utils/auth'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
 import type { TaskChecklistExecution, ChecklistStatus } from '../types/task-checklist-execution'
-import { CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS } from '../types/task-checklist-execution'
+import { CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS, ALL_CHECKLIST_STATUSES } from '../types/task-checklist-execution'
 import type { EvidenceResponseDto } from '../types/evidence'
 import { getEvidenceFileIcon, isImageFile } from '../types/evidence'
 import { ActionButton } from '../components/ui/ActionButton'
@@ -636,6 +636,25 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
             )}
           </h2>
         </div>
+
+        {/* Status-wise summary count */}
+        {!isLoadingChecklists && checklistExecutions.length > 0 && (
+          <div className="px-6 py-3 border-b border-border flex flex-wrap gap-2">
+            {ALL_CHECKLIST_STATUSES.map((s) => {
+              const count = checklistExecutions.filter((cl) => cl.checklistStatus === s).length
+              if (count === 0) return null
+              return (
+                <span
+                  key={s}
+                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${CHECKLIST_STATUS_COLORS[s]}`}
+                >
+                  {CHECKLIST_STATUS_LABELS[s]}
+                  <span className="font-bold">{count}</span>
+                </span>
+              )
+            })}
+          </div>
+        )}
 
         <div className="p-6">
           {isLoadingChecklists ? (

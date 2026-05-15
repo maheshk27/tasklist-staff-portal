@@ -31,70 +31,27 @@ if (
 }
 
 /**
- * Unregister Firebase's internally-created service worker
- * (registered at scope /firebase-cloud-messaging-push-scope).
+ * Returns the active PWA service worker registration (registered by vite-plugin-pwa).
  *
- * When Firebase SDK calls getToken() without a custom serviceWorkerRegistration,
- * it creates its own SW at this scope and binds the push subscription to it.
- * Our custom SW at scope / never receives the push events in that case.
+ * With `strategies: 'injectManifest'`, vite-plugin-pwa compiles src/sw.ts into the
+ * main SW (sw.js) at scope /. That single SW handles both Workbox precaching AND
+ * Firebase push events — so we simply wait for it to become ready instead of
+ * registering a second, competing SW.
  *
- * We unregister Firebase's internal SW so the push subscription gets
- * re-created on OUR SW when getToken() is called with serviceWorkerRegistration.
+ * Previously this function registered /firebase-messaging-sw.js as a separate SW,
+ * which caused two SWs to compete at scope / and broke push subscriptions in production.
  */
-async function cleanupFirebaseInternalSW(): Promise<void> {
-  try {
-    const allRegistrations = await navigator.serviceWorker.getRegistrations()
-    for (const reg of allRegistrations) {
-      if (reg.scope.includes('firebase-cloud-messaging-push-scope')) {
-        console.log('[firebase] Unregistering Firebase internal SW at scope:', reg.scope)
-        await reg.unregister()
-        console.log('[firebase] ✅ Firebase internal SW unregistered')
-      }
-    }
-  } catch (err) {
-    console.warn('[firebase] Could not clean up Firebase internal SW:', err)
-  }
-}
-
-/**
- * Register (or retrieve the existing) Firebase messaging service worker at scope /.
- * Also cleans up Firebase's internal SW to ensure push subscriptions are bound to ours.
- */
-export async function registerMessagingSW(): Promise<ServiceWorkerRegistration | null> {
+export async function getMessagingSWRegistration(): Promise<ServiceWorkerRegistration | null> {
   if (!('serviceWorker' in navigator)) return null
 
   try {
-    // Check if already registered at scope /
-    const existing = await navigator.serviceWorker.getRegistration('/')
-    if (existing?.active) {
-      // Also clean up Firebase's internal SW in case it was created
-      await cleanupFirebaseInternalSW()
-      console.log('[firebase] Reusing existing SW registration:', existing.scope)
-      return existing
-    }
-
-    // Clean up Firebase's internal SW before registering ours
-    await cleanupFirebaseInternalSW()
-
-    const registration = await navigator.serviceWorker.register('/firebase-messaging-sw.js')
-    console.log('[firebase] SW registered at scope:', registration.scope)
-
-    // Wait until the SW is active
-    if (registration.installing || registration.waiting) {
-      await new Promise<void>((resolve) => {
-        const sw = registration.installing ?? registration.waiting!
-        sw.addEventListener('statechange', function handler() {
-          if (sw.state === 'activated') {
-            sw.removeEventListener('statechange', handler)
-            resolve()
-          }
-        })
-      })
-    }
-
+    // navigator.serviceWorker.ready resolves with the active SW registration
+    // that vite-plugin-pwa already registered at scope /.
+    const registration = await navigator.serviceWorker.ready
+    console.log('[firebase] ✅ Using active PWA SW registration at scope:', registration.scope)
     return registration
   } catch (err) {
-    console.error('[firebase] SW registration failed:', err)
+    console.error('[firebase] Could not get active SW registration:', err)
     return null
   }
 }

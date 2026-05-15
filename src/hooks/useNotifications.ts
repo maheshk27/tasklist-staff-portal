@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getToken, onMessage } from 'firebase/messaging'
 import toast from 'react-hot-toast'
-import { messaging, registerMessagingSW, forceDeleteFCMToken } from '../config/firebase'
+import { messaging, getMessagingSWRegistration, forceDeleteFCMToken } from '../config/firebase'
 import { notificationService } from '../services/apiManager'
 import { decodeToken, getStoredTokens } from '../utils/auth'
 
@@ -69,15 +69,15 @@ export function useNotifications(): UseNotificationsReturn {
   }, [])
 
   // ─── SW postMessage listener (app open but not focused) ─────────────────────
-  // The SW broadcasts FCM_MESSAGE to all open windows on every push event.
-  // We show a toast here only when the tab is NOT focused — if focused,
-  // onMessage() above already handles it to avoid duplicate toasts.
+  // The SW only sends FCM_MESSAGE when the app is NOT focused.
+  // When focused, Firebase SDK's onMessage() above handles it instead.
+  // The document.hasFocus() guard below is kept as an extra safety net.
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
 
     const handleSWMessage = (event: MessageEvent) => {
       if (event.data?.type !== 'FCM_MESSAGE') return
-      if (document.hasFocus()) return // onMessage() handles it when tab is focused
+      if (document.hasFocus()) return // safety net: onMessage() handles focused case
 
       console.log('[useNotifications] ✅ SW postMessage received (app not focused):', event.data)
 
@@ -107,7 +107,7 @@ export function useNotifications(): UseNotificationsReturn {
     }
 
     try {
-      const swRegistration = await registerMessagingSW()
+      const swRegistration = await getMessagingSWRegistration()
       if (!swRegistration) {
         console.error('[useNotifications] Could not obtain SW registration — cannot get FCM token')
         return null

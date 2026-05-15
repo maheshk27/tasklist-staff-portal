@@ -48,7 +48,10 @@ export default defineConfig({
       injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico,json,woff2}'],
         maximumFileSizeToCacheInBytes: 5 * 1024 * 1024,
-        globIgnores: ['**/firebase-messaging-sw.js']
+        globIgnores: ['**/firebase-messaging-sw.js'],
+        // Build the SW as a classic IIFE (not an ES module) so that
+        // importScripts() works — importScripts is forbidden in ES module SWs.
+        rollupFormat: 'iife',
       }
     })
   ],

@@ -123,7 +123,7 @@ const SurveyEntryPage: React.FC = () => {
           isRackClean: data.isRackClean,
           isBoardAvailable: data.isBoardAvailable,
           actionTaken: data.actionTaken,
-          entryStatus: "COMPLETED", // Force status to COMPLETED on submit
+          entryStatus: data.entryStatus,
         },
       )
 
@@ -131,14 +131,14 @@ const SurveyEntryPage: React.FC = () => {
         // Update both entries and formData to reflect the new status immediately
         setEntries(prev => prev.map(e =>
           e.surveyEntryId === entry.surveyEntryId
-            ? { ...e, entryStatus: 'COMPLETED' }
+            ? { ...e, entryStatus: data.entryStatus, stockOutCount: data.stockOutCount, isRackClean: data.isRackClean, isBoardAvailable: data.isBoardAvailable, actionTaken: data.actionTaken }
             : e
         ))
         setFormData(prev => ({
           ...prev,
           [entry.surveyEntryId]: {
             ...prev[entry.surveyEntryId],
-            entryStatus: 'COMPLETED',
+            entryStatus: data.entryStatus,
           },
         }))
         toast.success('Entry updated successfully')
@@ -195,7 +195,10 @@ const SurveyEntryPage: React.FC = () => {
   const completedCount = entries.filter(e => e.entryStatus === 'COMPLETED').length
   const inProgressCount = entries.filter(e => e.entryStatus === 'IN_PROGRESS').length
   const notStartedCount = entries.filter(e => e.entryStatus === 'NOT_STARTED').length
-  const skippedCount = entries.filter(e => e.entryStatus === 'SKIPPED').length
+  // const skippedCount = entries.filter(e => e.entryStatus === 'SKIPPED').length
+
+  const rackCleanCount = entries.filter(e => e.isRackClean).length
+  const boardAvailableCount = entries.filter(e => e.isBoardAvailable).length
 
   return (
     <div className="space-y-6">
@@ -222,7 +225,7 @@ const SurveyEntryPage: React.FC = () => {
       {submissionDetails && (
         <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Submission Summary</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
             {/* Total Items */}
             <div className="bg-background rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Items</p>
@@ -248,9 +251,21 @@ const SurveyEntryPage: React.FC = () => {
             </div>
 
             {/* Skipped */}
-            <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+           {/*  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
               <p className="text-xs text-red-700 uppercase tracking-wide">Skipped</p>
               <p className="text-2xl font-bold mt-1 text-red-800">{skippedCount}</p>
+            </div> */}
+
+              {/* Rack Clean */}
+              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+              <p className="text-xs text-blue-700 uppercase tracking-wide">Rack Clean</p>
+              <p className="text-2xl font-bold mt-1 text-blue-800">{rackCleanCount}</p>
+            </div>
+
+            {/* Board Available */}
+            <div className="bg-purple-50 rounded-lg p-4 border border-purple-200">
+              <p className="text-xs text-purple-700 uppercase tracking-wide">Board Available</p>
+              <p className="text-2xl font-bold mt-1 text-purple-800">{boardAvailableCount}</p>
             </div>
           </div>
 
@@ -355,9 +370,8 @@ const SurveyEntryPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Rack Clean</label>
                     <div className="flex gap-3">
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        data.isRackClean ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
-                      }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isRackClean ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
+                        }`}>
                         <input
                           type="radio"
                           name={`rackClean-${entry.surveyEntryId}`}
@@ -370,9 +384,8 @@ const SurveyEntryPage: React.FC = () => {
                         </svg>
                         <span className="text-sm font-medium">Yes</span>
                       </label>
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        data.isRackClean === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
-                      }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isRackClean === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
+                        }`}>
                         <input
                           type="radio"
                           name={`rackClean-${entry.surveyEntryId}`}
@@ -392,9 +405,8 @@ const SurveyEntryPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Board Available</label>
                     <div className="flex gap-3">
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        data.isBoardAvailable ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
-                      }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
+                        }`}>
                         <input
                           type="radio"
                           name={`boardAvailable-${entry.surveyEntryId}`}
@@ -407,9 +419,8 @@ const SurveyEntryPage: React.FC = () => {
                         </svg>
                         <span className="text-sm font-medium">Yes</span>
                       </label>
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${
-                        data.isBoardAvailable === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
-                      }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
+                        }`}>
                         <input
                           type="radio"
                           name={`boardAvailable-${entry.surveyEntryId}`}
@@ -426,19 +437,25 @@ const SurveyEntryPage: React.FC = () => {
                   </div>
 
                   {/* Entry Status */}
-                  {/* <div>
-                    <label className="block text-sm font-medium text-foreground mb-1">Entry Status</label>
-                    <select
-                      value={data.entryStatus}
-                      onChange={(e) => handleInputChange(entry.surveyEntryId, 'entryStatus', e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                    >
-                      <option value="NOT_STARTED">Not Started</option>
-                      <option value="IN_PROGRESS">In Progress</option>
-                      <option value="COMPLETED">Completed</option>
-                      <option value="SKIPPED">Skipped</option>
-                    </select>
-                  </div> */}
+                  {/* {['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'SKIPPED'] */}
+                  <div>
+                    <label className="block text-sm font-medium text-foreground mb-2">Status</label>
+                    <div className="grid grid-cols-2 gap-3">
+                      {['IN_PROGRESS', 'COMPLETED'].map(status => (
+                        <label key={status} className={`p-2 border text-center rounded-lg cursor-pointer transition-colors ${data.entryStatus === status ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted/50'
+                          }`}>
+                          <input
+                            type="radio"
+                            name={`entryStatus-${entry.surveyEntryId}`}
+                            checked={data.entryStatus === status}
+                            onChange={() => handleInputChange(entry.surveyEntryId, 'entryStatus', status)}
+                            className="sr-only"
+                          />
+                          <span className="text-sm font-medium">{status.replace('_', ' ')}</span>
+                        </label>
+                      ))}
+                    </div>
+                  </div>
 
                   {/* Action Taken */}
                   <div>
@@ -466,7 +483,7 @@ const SurveyEntryPage: React.FC = () => {
                   {/* Submit Button */}
                   <button
                     onClick={() => handleSubmitEntry(entry)}
-                    disabled={submitting[entry.surveyEntryId]}
+                    disabled={submitting[entry.surveyEntryId] || data.entryStatus === 'NOT_STARTED' || data.entryStatus === 'SKIPPED'}
                     className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     {submitting[entry.surveyEntryId] ? (

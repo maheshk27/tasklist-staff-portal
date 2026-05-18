@@ -38,16 +38,17 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [permission, messagingSupported, requestPermission])
 
   const menuItems: MenuItem[] = [
-    { title: 'Dashboard', icon: '', path: '/dashboard' },
-    { title: 'My Tasks', icon: '', path: '/my-tasks' },
-    { title: 'Team Tasks', icon: '', path: '/team-tasks' },
+    { title: 'Dashboard', icon: '📊', path: '/dashboard' },
+    { title: 'My Tasks', icon: '✅', path: '/my-tasks' },
+    { title: 'Team Tasks', icon: '👥', path: '/team-tasks' },
+    { title: 'Daily Survey', icon: '📝', path: '/survey' },
     {
       title: 'My Account',
-      icon: '',
+      icon: '👤',
       children: [
-        { title: 'Profile', icon: '', path: '/profile' },
-        { title: 'Settings', icon: '', path: '/settings' },
-        { title: 'Change Password', icon: '', path: '/change-password' },
+        { title: 'Profile', icon: '🙍', path: '/profile' },
+        { title: 'Settings', icon: '⚙️', path: '/settings' },
+        { title: 'Change Password', icon: '🔒', path: '/change-password' },
       ]
     }
   ]
@@ -106,7 +107,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
             </Link>
           </div>
-          
+
           {/* Right Section: User Profile & Logout */}
           <div className="flex items-center gap-4">
             <div className="flex items-center gap-2">
@@ -117,15 +118,15 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <span className="text-sm font-medium">{user?.firstName} {user?.lastName}</span>
                 <span className="text-xs text-muted-foreground">{user?.role?.roleName}</span>
               </div>
-            <button
-              onClick={() => setShowLogoutConfirm(true)}
-              className="ml-2 p-2 text-destructive rounded-md hover:bg-destructive/10 transition-colors"
-              title="Logout"
-            >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-              </svg>
-            </button>
+              <button
+                onClick={() => setShowLogoutConfirm(true)}
+                className="ml-2 p-2 text-destructive rounded-md hover:bg-destructive/10 transition-colors"
+                title="Logout"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                </svg>
+              </button>
             </div>
           </div>
         </div>
@@ -133,9 +134,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       <div className="flex">
         {/* Sidebar */}
-        <aside className={`${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        } fixed inset-y-0 left-0 md:relative md:inset-y-auto md:translate-x-0 z-50 w-80 h-screen md:h-[calc(100vh-73px)] bg-card border-r border-border transition-transform duration-300 ease-in-out md:block`}>
+        <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          } fixed inset-y-0 left-0 md:relative md:inset-y-auto md:translate-x-0 z-50 w-80 h-screen md:h-[calc(100vh-73px)] bg-card border-r border-border transition-transform duration-300 ease-in-out md:block`}>
           {/* Navigation Menu */}
           <nav className="p-4 flex flex-col h-full">
             {/* Logo at top - mobile only */}
@@ -154,9 +154,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <div>
                       <button
                         onClick={() => toggleMenu(item.title)}
-                        className={`w-full text-left p-3 rounded-lg transition-all duration-200 flex items-center justify-between ${
-                          isMenuActive(item) ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
-                        }`}
+                        className={`w-full text-left p-3 rounded-lg transition-all duration-200 flex items-center justify-between ${isMenuActive(item) ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
+                          }`}
                       >
                         <div className="flex items-center gap-3">
                           <div className="w-8 h-8 rounded-lg flex items-center justify-center text-lg">
@@ -165,9 +164,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           <span className="font-medium text-sm">{item.title}</span>
                         </div>
                         <svg
-                          className={`w-4 h-4 transition-transform duration-200 ${
-                            expandedMenus.has(item.title) ? 'rotate-180' : ''
-                          }`}
+                          className={`w-4 h-4 transition-transform duration-200 ${expandedMenus.has(item.title) ? 'rotate-180' : ''
+                            }`}
                           fill="none"
                           stroke="currentColor"
                           viewBox="0 0 24 24"
@@ -175,7 +173,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
                         </svg>
                       </button>
-                      
+
                       {/* Child menu items */}
                       {expandedMenus.has(item.title) && (
                         <div className="ml-11 mt-1 space-y-1 border-l-2 border-border pl-4">
@@ -184,11 +182,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                               key={childIndex}
                               to={child.path!}
                               onClick={() => setIsSidebarOpen(false)}
-                              className={`block px-3 py-2 rounded-lg transition-all duration-200 text-sm ${
-                                isActivePath(child.path || '')
+                              className={`block px-3 py-2 rounded-lg transition-all duration-200 text-sm ${isActivePath(child.path || '')
                                   ? 'bg-primary/10 text-primary font-medium'
                                   : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                              }`}
+                                }`}
                             >
                               <span className="flex items-center gap-3">
                                 <span className="text-lg">{child.icon}</span>
@@ -204,11 +201,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Link
                       to={item.path!}
                       onClick={() => setIsSidebarOpen(false)}
-                      className={`block p-3 rounded-lg transition-all duration-200 ${
-                        isActivePath(item.path || '')
+                      className={`block p-3 rounded-lg transition-all duration-200 ${isActivePath(item.path || '')
                           ? 'bg-primary/10 text-primary'
                           : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-                      }`}
+                        }`}
                     >
                       <span className="flex items-center gap-3">
                         <span className="w-8 h-8 rounded-lg flex items-center justify-center text-lg">

@@ -13,6 +13,8 @@ import MyTasks from './pages/MyTasks'
 import TeamTasks from './pages/TeamTasks'
 import TaskExecutionDetail from './pages/TaskExecutionDetail'
 import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
+import SurveyList from './pages/SurveyList'
+import SurveyEntryPage from './pages/SurveyEntry'
 
 function App() {
 
@@ -73,6 +75,16 @@ function App() {
         <Route path="/team-tasks/:taskExecutionId/checklist/:checklistExecutionId" element={
           <ProtectedRoute>
             <Layout><ChecklistExecutionDetail readOnly={true} /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/survey" element={
+          <ProtectedRoute>
+            <Layout><SurveyList /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/survey/:dailySurveyId" element={
+          <ProtectedRoute>
+            <Layout><SurveyEntryPage /></Layout>
           </ProtectedRoute>
         } />
       </Routes>

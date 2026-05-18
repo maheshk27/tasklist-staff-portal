@@ -10,6 +10,7 @@ import type { UserStoresResponseDto } from '../types/user-store'
 import type { TaskExecution } from '../types/task-execution'
 import type { TaskChecklistExecution, UpdateTaskChecklistExecutionDto, UpdateTaskExecutionDto } from '../types/task-checklist-execution'
 import type { EvidenceResponseDto } from '../types/evidence'
+import type { SurveyWithStatus, SurveyEntry, CreateSurveySubmissionDto, UpdateSurveyEntryDto } from '../types/daily-survey'
 
 export interface ApiResponse<T = unknown> {
   success: boolean
@@ -271,6 +272,75 @@ export const taskService = {
       return response.data
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch evidence'
+      throw new Error(errorMessage)
+    }
+  },
+
+  // ==================== Daily Survey API ====================
+
+  /**
+   * Get active surveys with submission status for a store/date (for staff portal)
+   */
+  async getActiveSurveysForStaff(storeId: number, surveyDate: string): Promise<ApiResponse<SurveyWithStatus[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<SurveyWithStatus[]>>('/survey-submissions/active-by-store', {
+        params: { storeId, surveyDate },
+      })
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch active surveys'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Create a new survey submission
+   */
+  async createSurveySubmission(data: CreateSurveySubmissionDto): Promise<ApiResponse<any>> {
+    try {
+      const response = await taskApi.post<ApiResponse<any>>('/survey-submissions', data)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create survey submission'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get all entries for a submission
+   */
+  async getSurveyEntries(submissionId: number): Promise<ApiResponse<SurveyEntry[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<SurveyEntry[]>>(`/survey-submissions/${submissionId}/entries`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch survey entries'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Update an entry by ID
+   */
+  async updateSurveyEntry(submissionId: number, entryId: number, data: UpdateSurveyEntryDto): Promise<ApiResponse<SurveyEntry>> {
+    try {
+      const response = await taskApi.put<ApiResponse<SurveyEntry>>(`/survey-submissions/${submissionId}/entries/${entryId}`, data)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update survey entry'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get survey entries with submission and entry names
+   */
+  async getSurveySubmission(submissionId: number): Promise<ApiResponse<any>> {
+    try {
+      const response = await taskApi.get<ApiResponse<any>>(`/survey-submissions/${submissionId}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch survey submission'
       throw new Error(errorMessage)
     }
   },

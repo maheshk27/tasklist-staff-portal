@@ -195,8 +195,13 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
       }
     }
 
+    // Reset both file inputs
     if (fileInputRef.current) {
       fileInputRef.current.value = ''
+    }
+    const docInput = document.getElementById('document-upload') as HTMLInputElement | null
+    if (docInput) {
+      docInput.value = ''
     }
 
     if (uploadedCount > 0) {
@@ -395,24 +400,46 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
             )}
           </h2>
 
-          {/* Upload button — only when in_progress and not readOnly */}
+          {/* Upload buttons — only when in_progress and not readOnly */}
           {effectiveStatus === 'in_progress' && !readOnly && (
-            <div>
+            <div className="flex items-center gap-2">
+              {/* Camera input — only for images, uses rear camera on mobile */}
               <input
                 ref={fileInputRef}
                 type="file"
-                multiple
+                capture="environment"
                 onChange={handleUploadEvidence}
                 className="hidden"
-                accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                accept="image/*"
+              />
+              {/* File input — for documents (PDF, DOC, CSV, etc.) */}
+              <input
+                type="file"
+                onChange={handleUploadEvidence}
+                className="hidden"
+                id="document-upload"
+                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
               />
               <ActionButton
                 action="add"
                 layout="grid"
-                title="Add Files"
+                title="Camera"
                 onClick={() => fileInputRef.current?.click()}
                 disabled={isUploading}
               />
+              <label
+                htmlFor="document-upload"
+                className={`px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors flex items-center gap-2 ${
+                  isUploading
+                    ? 'opacity-50 cursor-not-allowed'
+                    : 'hover:bg-muted'
+                }`}
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+                Documents
+              </label>
             </div>
           )}
 

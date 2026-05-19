@@ -1,9 +1,10 @@
 import { useState, useEffect, useCallback } from 'react'
 import { getToken, onMessage } from 'firebase/messaging'
 import toast from 'react-hot-toast'
-import { messaging, getMessagingSWRegistration, forceDeleteFCMToken } from '../config/firebase'
+import { messaging, getMessagingSWRegistration } from '../config/firebase'
 import { notificationService } from '../services/apiManager'
 import { decodeToken, getStoredTokens } from '../utils/auth'
+import { showNotificationToast } from '../utils/notification-toast'
 
 /** Get the current logged-in userId from the stored JWT token */
 function getCurrentUserId(): number | null {
@@ -58,9 +59,7 @@ export function useNotifications(): UseNotificationsReturn {
 
       const body = payload.notification?.body || payload.data?.body || ''
 
-      toast.success(`${title}${body ? `: ${body}` : ''}`, {
-        duration: 5000,
-      })
+      showNotificationToast(title, body)
     })
 
     return () => {
@@ -82,9 +81,7 @@ export function useNotifications(): UseNotificationsReturn {
       console.log('[useNotifications] ✅ SW postMessage received (app not focused):', event.data)
 
       const { title = 'New Notification', body = '' } = event.data
-      toast.success(`${title}${body ? `: ${body}` : ''}`, {
-        duration: 5000,
-      })
+      showNotificationToast(title, body)
     }
 
     navigator.serviceWorker.addEventListener('message', handleSWMessage)
@@ -154,8 +151,6 @@ export function useNotifications(): UseNotificationsReturn {
       setPermission(permissionResult)
 
       if (permissionResult === 'granted') {
-        // Force delete any old token before getting a fresh one
-        await forceDeleteFCMToken()
         const fcmToken = await getFCMTokenInternal()
         if (fcmToken) {
           toast.success('Notifications enabled successfully')
@@ -183,8 +178,9 @@ export function useNotifications(): UseNotificationsReturn {
       return null
     }
 
-    // Force delete old token to ensure fresh subscription on correct SW
-    await forceDeleteFCMToken()
+    // Re-fetch the current FCM token. Firebase getToken() returns the existing
+    // cached token or creates one if none exists — no need to delete first.
+    // If the token is stale/invalid, getFCMTokenInternal handles errors gracefully.
     return getFCMTokenInternal()
   }, [messagingSupported, permission, getFCMTokenInternal])
 

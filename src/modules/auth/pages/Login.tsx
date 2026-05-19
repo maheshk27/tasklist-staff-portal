@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
-import { Link, useNavigate, useLocation } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth'
 import FormField from '../../../components/ui/FormField'
 import { ActionButton } from '../../../components/ui/ActionButton'
@@ -138,14 +138,14 @@ const Login: React.FC = () => {
               disabled={isLoading}
             />
 
-            <div className="text-center">
+            {/* <div className="text-center">
               <Link
                 to="/forgot-password"
                 className="text-sm text-primary hover:text-primary/80"
               >
                 Forgot password?
               </Link>
-            </div>
+            </div> */}
           </div>
         </div>
       </div>

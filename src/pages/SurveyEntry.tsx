@@ -12,7 +12,6 @@ const SurveyEntryPage: React.FC = () => {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState<Record<number, boolean>>({})
-  const [submissionStatus, setSubmissionStatus] = useState<string>('')
   const [submissionDetails, setSubmissionDetails] = useState<{
     totalItems: number
     completedItems: number
@@ -51,7 +50,6 @@ const SurveyEntryPage: React.FC = () => {
           const data = res.data
 
           // Set submission details
-          setSubmissionStatus(data.surveyStatus || 'DRAFT')
           setSubmissionDetails({
             totalItems: data.totalItems || 0,
             completedItems: data.completedItems || 0,

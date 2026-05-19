@@ -5,7 +5,8 @@ export function showNotificationToast(
   title: string,
   body?: string,
   icon?: string,
-  duration = 6000,
+  duration = 8000,
+  screenPath?: string,
 ) {
   const timestamp = new Date().toLocaleTimeString('en-IN', {
     hour: '2-digit',
@@ -25,6 +26,7 @@ export function showNotificationToast(
           body={body}
           timestamp={timestamp}
           icon={icon}
+          screenPath={screenPath}
           onDismiss={() => toast.dismiss(t.id)}
         />
       </div>

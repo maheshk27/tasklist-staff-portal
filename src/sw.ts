@@ -113,6 +113,7 @@ self.addEventListener('push', (event) => {
           title: notificationTitle,
           body: notificationBody,
           data: notificationData,
+          screenPath: notificationData?.screenPath || '',
         })
       })
 
@@ -144,17 +145,22 @@ self.addEventListener('notificationclick', (event) => {
   console.log('👆 [SW] Notification clicked:', notifEvent.notification.tag)
   notifEvent.notification.close()
 
-  const screenPath = (notifEvent.notification.data as Record<string, string>)?.screenPath || '/'
+  const data = (notifEvent.notification.data as Record<string, string>) || {}
+  const screenPath = data?.screenPath || data?.clickAction || '/'
 
   notifEvent.waitUntil(
     self.clients
       .matchAll({ type: 'window', includeUncontrolled: true })
       .then((clientList) => {
+        // If an existing window/tab is open, navigate it to the screen path
         for (const client of clientList) {
           if (client.url.includes(self.location.origin) && 'focus' in client) {
-            return (client as WindowClient).focus()
+            const windowClient = client as WindowClient
+            windowClient.navigate(screenPath)
+            return windowClient.focus()
           }
         }
+        // Otherwise open a new window/tab
         if (self.clients.openWindow) {
           return self.clients.openWindow(screenPath)
         }

@@ -58,8 +58,9 @@ export function useNotifications(): UseNotificationsReturn {
         'New Notification'
 
       const body = payload.notification?.body || payload.data?.body || ''
+      const screenPath = payload.data?.screenPath || payload.data?.clickAction || ''
 
-      showNotificationToast(title, body)
+      showNotificationToast(title, body, undefined, 8000, screenPath)
     })
 
     return () => {
@@ -80,8 +81,9 @@ export function useNotifications(): UseNotificationsReturn {
 
       console.log('[useNotifications] ✅ SW postMessage received (app not focused):', event.data)
 
-      const { title = 'New Notification', body = '' } = event.data
-      showNotificationToast(title, body)
+      const { title = 'New Notification', body = '', data = {} } = event.data
+      const screenPath = data?.screenPath || data?.clickAction || ''
+      showNotificationToast(title, body, undefined, 8000, screenPath)
     }
 
     navigator.serviceWorker.addEventListener('message', handleSWMessage)

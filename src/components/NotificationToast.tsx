@@ -1,10 +1,12 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 
 interface NotificationToastProps {
   title: string
   body?: string
   timestamp?: string
   icon?: string
+  screenPath?: string
   onDismiss?: () => void
 }
 
@@ -13,8 +15,18 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
   body,
   timestamp,
   icon,
+  screenPath,
   onDismiss,
 }) => {
+  const navigate = useNavigate()
+
+  const handleView = () => {
+    if (screenPath) {
+      navigate(screenPath)
+    }
+    if (onDismiss) onDismiss()
+  }
+
   return (
     <div className="flex items-start gap-3 w-full max-w-sm">
       {/* Icon */}
@@ -30,6 +42,18 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
         )}
         {timestamp && (
           <p className="text-[10px] text-muted-foreground/60 mt-1">{timestamp}</p>
+        )}
+
+        {/* Action buttons */}
+        {screenPath && (
+          <div className="flex items-center gap-2 mt-2">
+            <button
+              onClick={handleView}
+              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20"
+            >
+              View Details
+            </button>
+          </div>
         )}
       </div>
 

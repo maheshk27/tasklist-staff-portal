@@ -28,7 +28,10 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
   }
 
   return (
-    <div className="flex items-start gap-3 w-full max-w-sm">
+    <div
+      className="flex items-start gap-3 w-full max-w-sm cursor-pointer"
+      onClick={screenPath ? handleView : undefined}
+    >
       {/* Icon */}
       <div className="shrink-0 w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
         <span className="text-xl">{icon || '🔔'}</span>
@@ -43,23 +46,11 @@ const NotificationToast: React.FC<NotificationToastProps> = ({
         {timestamp && (
           <p className="text-[10px] text-muted-foreground/60 mt-1">{timestamp}</p>
         )}
-
-        {/* Action buttons */}
-        {screenPath && (
-          <div className="flex items-center gap-2 mt-2">
-            <button
-              onClick={handleView}
-              className="text-xs font-medium text-primary hover:text-primary/80 transition-colors px-2 py-1 rounded-md bg-primary/10 hover:bg-primary/20"
-            >
-              View Details
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Dismiss button */}
       <button
-        onClick={onDismiss}
+        onClick={(e) => { e.stopPropagation(); if (onDismiss) onDismiss(); }}
         className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full hover:bg-muted transition-colors"
       >
         <svg className="w-3 h-3 text-muted-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">

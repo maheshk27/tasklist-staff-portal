@@ -215,9 +215,6 @@ const SurveyEntryPage: React.FC = () => {
             Back to Surveys
           </button>
           <h1 className="text-3xl font-bold">{submissionDetails?.surveyName || 'Survey Entry Details'}</h1>
-          <p className="text-muted-foreground mt-1">
-            Status: {getStatusBadge(submissionStatus)}
-          </p>
         </div>
       </div>
 

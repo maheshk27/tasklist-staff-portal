@@ -5,7 +5,6 @@ import { onboardingService, taskService } from '../services/apiManager'
 import type { StoreWithMapping } from '../types/user-store'
 import type { SurveyWithStatus } from '../types/daily-survey'
 import toast from 'react-hot-toast'
-import { formatDate } from '../utils/date'
 
 const SurveyList: React.FC = () => {
   const { user } = useAuth()
@@ -18,7 +17,7 @@ const SurveyList: React.FC = () => {
   const [storesError, setStoresError] = useState<string | null>(null)
 
   // Survey date
-  const today = formatDate(new Date()) // Format as YYYY-MM-DD for input[type="date"]
+  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
   const [surveyDate, setSurveyDate] = useState(today)
 
   // Surveys

@@ -36,7 +36,7 @@ export function formatTime(dateString?: string | Date | null): string {
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-  }).toUpperCase();
+  });
 }
 
 /**
@@ -59,7 +59,7 @@ export function formatDateTime(
     hour: '2-digit',
     minute: '2-digit',
     hour12: true,
-  }).toUpperCase();
+  });
 }
 
 /**

@@ -218,16 +218,6 @@ const MyTasks: React.FC = () => {
           </div>
         </div>
 
-       {/*  {task.mstTask?.startTime && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-            <span>🕐</span>
-            <span>
-              {task.mstTask.startTime}
-              {task.mstTask.endTime ? ` - ${task.mstTask.endTime}` : ''}
-            </span>
-          </div>
-        )} */}
-
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
           <span>🕐</span>
           <span>{formatDate(task.executionDate)}</span>

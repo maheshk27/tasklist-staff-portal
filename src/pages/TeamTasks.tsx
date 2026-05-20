@@ -6,6 +6,7 @@ import type { StoreWithMapping } from '../types/user-store'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
 import type { StoreUserItem } from '../services/apiManager'
+import { formatDateTime, formatTime } from '../utils/date'
 
 type TabType = 'today' | 'historical'
 
@@ -317,12 +318,12 @@ const TeamTasks: React.FC = () => {
           </div>
         </div>
 
-        {task.mstTask?.startTime && (
+        {task.fromTime && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
             <span>🕐</span>
             <span>
-              {task.mstTask.startTime}
-              {task.mstTask.endTime ? ` - ${task.mstTask.endTime}` : ''}
+              {formatDateTime(task.fromTime)}
+              {task.toTime ? ` - ${formatTime(task.toTime)}` : ''}
             </span>
           </div>
         )}

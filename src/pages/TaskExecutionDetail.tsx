@@ -344,7 +344,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
             <span className="font-medium text-foreground">Execution Date:</span>{' '}
             {taskExecution.executionDate ? formatDate(taskExecution.executionDate) : '-'}
           </div>
-          {taskExecution.mstTask?.startTime && (
+          {taskExecution.fromTime && (
             <div>
               <span className="font-medium text-foreground">Time:</span>{' '}
               {taskExecution.fromTime ? formatTime(taskExecution.fromTime) : '--:--'}

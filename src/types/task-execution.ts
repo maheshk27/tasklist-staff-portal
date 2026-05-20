@@ -5,6 +5,8 @@ export interface TaskExecution {
   storeId: number
   userId: number
   executionDate: string
+  fromTime: string
+  toTime: string
   executionStatus: TaskExecutionStatus
   pickedBy?: number
   completedBy?: number

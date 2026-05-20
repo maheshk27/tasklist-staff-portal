@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { onboardingService } from '../services/apiManager'
 import type { StoreWithMapping } from '../types/user-store'
+import { formatDateTime } from '../utils/date'
 
 interface UserStoreListProps {
   userId: number
@@ -115,28 +116,14 @@ const UserStoreList: React.FC<UserStoreListProps> = ({ userId }) => {
               <p className="text-sm text-muted-foreground mb-2">
                 Assigned On:{' '}
                 {mapping?.assignedAt
-                  ? new Date(mapping.assignedAt).toLocaleString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                  })
+                  ? formatDateTime(mapping.assignedAt)
                   : '-'}
               </p>
             ) : (
               <p className="text-sm text-muted-foreground mb-2">
                 Unassigned On:{' '}
                 {mapping?.unAssignedAt
-                  ? new Date(mapping.unAssignedAt).toLocaleString('en-IN', {
-                    day: '2-digit',
-                    month: 'short',
-                    year: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit',
-                    hour12: true,
-                  })
+                  ? formatDateTime(mapping.unAssignedAt)
                   : '-'}
               </p>
             )}

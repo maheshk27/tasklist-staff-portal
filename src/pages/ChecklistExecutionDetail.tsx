@@ -7,6 +7,7 @@ import type { TaskChecklistExecution, ChecklistStatus } from '../types/task-chec
 import type { EvidenceResponseDto } from '../types/evidence'
 import { getEvidenceFileIcon, isImageFile } from '../types/evidence'
 import { ActionButton } from '../components/ui/ActionButton'
+import { formatDateTime, formatTime, isTimeToStart } from '../utils/date'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
@@ -314,8 +315,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
               <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <span>🕐</span>
                 <span>
-                  {checklistExecution.taskChecklist.startTime}
-                  {checklistExecution.taskChecklist.endTime ? ` - ${checklistExecution.taskChecklist.endTime}` : ''}
+                  {formatDateTime(checklistExecution.fromTime)}
+                  {checklistExecution.toTime ? ` - ${formatTime(checklistExecution.toTime)}` : ''}
                 </span>
               </div>
             </div>
@@ -498,7 +499,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                       {evidence.fileName || 'Unnamed file'}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {new Date(evidence.uploadedAt).toLocaleDateString()}
+                      {formatDateTime(evidence.createdAt)}
                     </p>
                   </div>
 
@@ -531,16 +532,36 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
             {effectiveStatus === 'not_started' && (
               <div className="text-center">
                 <div className="text-3xl mb-3">⏳</div>
-                <p className="text-sm text-muted-foreground mb-4">
-                  This checklist is pending. Start it to begin working.
-                </p>
-                <ActionButton
-                  action="signin"
-                  layout="grid"
-                  title="Start Task"
-                  onClick={handleStartTask}
-                  disabled={isStarting}
-                />
+                {isTimeToStart(checklistExecution.fromTime) ? (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      This checklist is pending. Start it to begin working.
+                    </p>
+                    <ActionButton
+                      action="signin"
+                      layout="grid"
+                      title="Start Task"
+                      onClick={handleStartTask}
+                      disabled={isStarting}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-orange-500 font-medium mb-1">
+                      ⏰ Checklist starts at {formatTime(checklistExecution.fromTime)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Please wait until the scheduled start time to begin.
+                    </p>
+                    <ActionButton
+                      action="signin"
+                      layout="grid"
+                      title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                      onClick={handleStartTask}
+                      disabled={true}
+                    />
+                  </>
+                )}
               </div>
             )}
 
@@ -552,7 +573,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                 </p>
                 {checklistExecution.startedAt && (
                   <p className="text-xs text-muted-foreground mb-4">
-                    Started at: {new Date(checklistExecution.startedAt).toLocaleString()}
+                    Started at: { formatDateTime(checklistExecution.startedAt) }
                   </p>
                 )}
               <ActionButton
@@ -571,7 +592,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                 <p className="text-sm text-green-600 font-medium">Checklist completed</p>
                 {checklistExecution.completedAt && (
                   <p className="text-xs text-muted-foreground mt-1">
-                    Completed at: {new Date(checklistExecution.completedAt).toLocaleString()}
+                    Completed at: {formatDateTime(checklistExecution.completedAt)}
                   </p>
                 )}
                 {checklistExecution.completedByUser && (
@@ -600,7 +621,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                     <p className="text-sm font-medium text-foreground">Started</p>
                     {checklistExecution.startedAt ? (
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {new Date(checklistExecution.startedAt).toLocaleString()}
+                        {formatDateTime(checklistExecution.startedAt)}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic mt-0.5">Not started yet</p>
@@ -617,7 +638,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                     <p className="text-sm font-medium text-foreground">Completed</p>
                     {checklistExecution.completedAt ? (
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {new Date(checklistExecution.completedAt).toLocaleString()}
+                        {formatDateTime(checklistExecution.completedAt)}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic mt-0.5">Not completed yet</p>
@@ -650,8 +671,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
       {/* ==== Created / Updated info ==== */}
       <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-4">
-        <span>Created: {new Date(checklistExecution.createdAt).toLocaleString()}</span>
-        <span>Updated: {new Date(checklistExecution.updatedAt).toLocaleString()}</span>
+        <span>Created: {formatDateTime(checklistExecution.createdAt)}</span>
+        <span>Updated: {formatDateTime(checklistExecution.updatedAt)}</span>
       </div>
 
       {/* ==== Complete Confirmation Modal — hidden when readOnly */}

@@ -10,6 +10,7 @@ import { CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS, ALL_CHECKLIST_STATUSE
 import type { EvidenceResponseDto } from '../types/evidence'
 import { getEvidenceFileIcon, isImageFile } from '../types/evidence'
 import { ActionButton } from '../components/ui/ActionButton'
+import { formatDate, formatDateTime, formatTime, isTimeToStart } from '../utils/date'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
@@ -339,17 +340,17 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
               {taskExecution.store.storeName} ({taskExecution.store.storeCode})
             </div>
           )}
+          <div>
+            <span className="font-medium text-foreground">Execution Date:</span>{' '}
+            {taskExecution.executionDate ? formatDate(taskExecution.executionDate) : '-'}
+          </div>
           {taskExecution.mstTask?.startTime && (
             <div>
               <span className="font-medium text-foreground">Time:</span>{' '}
-              {taskExecution.mstTask.startTime}
-              {taskExecution.mstTask.endTime ? ` - ${taskExecution.mstTask.endTime}` : ''}
+              {taskExecution.fromTime ? formatTime(taskExecution.fromTime) : '--:--'}
+              {taskExecution.toTime ? ` - ${formatTime(taskExecution.toTime)}` : ''}
             </div>
           )}
-          <div>
-            <span className="font-medium text-foreground">Execution Date:</span>{' '}
-            {taskExecution.executionDate ? new Date(taskExecution.executionDate).toLocaleDateString() : '-'}
-          </div>
         </div>
 
         {taskExecution.mstTask?.description && (
@@ -432,11 +433,10 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
               />
               <label
                 htmlFor="document-upload"
-                className={`px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors flex items-center gap-2 ${
-                  isUploading
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-muted'
-                }`}
+                className={`px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors flex items-center gap-2 ${isUploading
+                  ? 'opacity-50 cursor-not-allowed'
+                  : 'hover:bg-muted'
+                  }`}
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
@@ -501,7 +501,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                       {evidence.fileName || 'Unnamed file'}
                     </p>
                     <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {new Date(evidence.uploadedAt).toLocaleDateString()}
+                      {formatDateTime(evidence.uploadedAt)}
                     </p>
                   </div>
 
@@ -534,16 +534,36 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
               {effectiveStatus === 'not_started' && (
                 <div className="text-center">
                   <div className="text-3xl mb-3">⏳</div>
-                  <p className="text-sm text-muted-foreground mb-4">
-                    This task is pending. Start it to begin working.
-                  </p>
-                  <ActionButton
-                    action="signin"
-                    layout="grid"
-                    title="Start Task"
-                    onClick={handleStartTask}
-                    disabled={isStarting}
-                  />
+                  {isTimeToStart(taskExecution.fromTime) ? (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        This task is pending. Start it to begin working.
+                      </p>
+                      <ActionButton
+                        action="signin"
+                        layout="grid"
+                        title="Start Task"
+                        onClick={handleStartTask}
+                        disabled={isStarting}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-orange-500 font-medium mb-1">
+                        ⏰ Task starts at {formatTime(taskExecution.fromTime)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Please wait until the scheduled start time to begin.
+                      </p>
+                      <ActionButton
+                        action="signin"
+                        layout="grid"
+                        title={`Starts at ${formatTime(taskExecution.fromTime)}`}
+                        onClick={handleStartTask}
+                        disabled={true}
+                      />
+                    </>
+                  )}
                 </div>
               )}
 
@@ -555,7 +575,8 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                   </p>
                   {taskExecution.startedAt && (
                     <p className="text-xs text-muted-foreground mb-4">
-                      Started at: {new Date(taskExecution.startedAt).toLocaleString()}
+                      Started at: {
+                        formatDateTime(taskExecution.startedAt)}
                     </p>
                   )}
                   <ActionButton
@@ -574,7 +595,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                   <p className="text-sm text-green-600 font-medium">Task completed</p>
                   {taskExecution.completedAt && (
                     <p className="text-xs text-muted-foreground mt-1">
-                      Completed at: {new Date(taskExecution.completedAt).toLocaleString()}
+                      Completed at: {formatDateTime(taskExecution.completedAt)}
                     </p>
                   )}
                   {taskExecution.completedByUser && (
@@ -595,15 +616,14 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
               <div className="space-y-6 relative">
                 <div className="flex items-start gap-4">
                   <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${
-                      effectiveStatus === 'not_started' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
-                    }`} />
+                    <div className={`w-3 h-3 rounded-full ring-2 ${effectiveStatus === 'not_started' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
+                      }`} />
                   </div>
                   <div className="flex-1 pt-0">
                     <p className="text-sm font-medium text-foreground">Started</p>
                     {taskExecution.startedAt ? (
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {new Date(taskExecution.startedAt).toLocaleString()}
+                        {formatDateTime(taskExecution.startedAt)}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic mt-0.5">Not started yet</p>
@@ -612,15 +632,14 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${
-                      effectiveStatus === 'completed' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
-                    }`} />
+                    <div className={`w-3 h-3 rounded-full ring-2 ${effectiveStatus === 'completed' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
+                      }`} />
                   </div>
                   <div className="flex-1 pt-0">
                     <p className="text-sm font-medium text-foreground">Completed</p>
                     {taskExecution.completedAt ? (
                       <p className="text-sm text-muted-foreground mt-0.5">
-                        {new Date(taskExecution.completedAt).toLocaleString()}
+                        {formatDateTime(taskExecution.completedAt)}
                       </p>
                     ) : (
                       <p className="text-sm text-muted-foreground italic mt-0.5">Not completed yet</p>
@@ -702,77 +721,67 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
               {[...checklistExecutions]
                 .sort((a, b) => (a.taskChecklist?.sequence ?? 999) - (b.taskChecklist?.sequence ?? 999))
                 .map((cl) => {
-                const checklistStatus = cl.checklistStatus as ChecklistStatus
-                const statusColorClass = CHECKLIST_STATUS_COLORS[checklistStatus] || 'bg-gray-100 text-gray-800'
-                const statusLabel = CHECKLIST_STATUS_LABELS[checklistStatus] || cl.checklistStatus
+                  const checklistStatus = cl.checklistStatus as ChecklistStatus
+                  const statusColorClass = CHECKLIST_STATUS_COLORS[checklistStatus] || 'bg-gray-100 text-gray-800'
+                  const statusLabel = CHECKLIST_STATUS_LABELS[checklistStatus] || cl.checklistStatus
 
-                return (
-                  <button
-                    key={cl.taskChecklistExecutionId}
-                    onClick={() => navigate(readOnly
-                      ? `/team-tasks/${taskExecutionId}/checklist/${cl.taskChecklistExecutionId}`
-                      : `/my-tasks/${taskExecutionId}/checklist/${cl.taskChecklistExecutionId}`
-                    )}
-                    className="w-full text-left border border-border rounded-lg p-4 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group"
-                  >
-                    <div className="flex items-start justify-between gap-4 mb-3">
-                      <div className="flex-1 min-w-0">
-                        <h3 className="font-medium text-foreground">
-                          {cl.taskChecklist?.sequence != null && (
-                            <span className="text-muted-foreground mr-1.5">{cl.taskChecklist.sequence}.</span>
-                          )}
-                          {cl.taskChecklist?.title || `Checklist #${cl.mstChecklistId}`}
+                  return (
+                    <div
+                      key={cl.taskChecklistExecutionId}
+                      onClick={() => navigate(readOnly
+                        ? `/team-tasks/${taskExecutionId}/checklist/${cl.taskChecklistExecutionId}`
+                        : `/my-tasks/${taskExecutionId}/checklist/${cl.taskChecklistExecutionId}`
+                      )}
+                      className="w-full text-left border border-border rounded-lg p-4 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group"
+                    >
+                      <h3 className="font-medium text-foreground mb-2">
+                        {cl.taskChecklist?.sequence != null && (
+                          <span className="text-muted-foreground mr-1.5">{cl.taskChecklist.sequence}.</span>
+                        )}
+                        {cl.taskChecklist?.title || `Checklist #${cl.mstChecklistId}`}
+
+                      </h3>
+
+
+                      {/* Regional text */}
+                      {cl.taskChecklist?.regionalText && (
+                        <p className="text-sm text-muted-foreground mb-2">{cl.taskChecklist.regionalText}</p>
+                      )}
+
+                      {cl.fromTime && cl.toTime && (
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                          <span>🕐</span>
+                          <span>
+                            {formatDate(cl.fromTime)}, {formatTime(cl.fromTime)} - {formatTime(cl.toTime)}
+                          </span>
+                        </div>
+                      )}
+
+                      {/* Completed info */}
+                      {cl.completedByUser && (
+                        <p className="text-xs text-muted-foreground mb-2">
+                          Completed by: {cl.completedByUser.firstName} {cl.completedByUser.lastName}
+                        </p>
+                      )}
+
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1 min-w-0">
                           {cl.taskChecklist?.isMandatory && (
                             <span className="ml-2 text-xs text-red-500 font-medium">(Mandatory)</span>
                           )}
-                        </h3>
-                        {cl.taskChecklist?.regionalText && (
-                          <p className="text-sm text-muted-foreground mt-0.5">{cl.taskChecklist.regionalText}</p>
-                        )}
-                      </div>
-
-                      <div className="flex items-center gap-2 shrink-0">
-                        <span className={`shrink-0 px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
-                          {statusLabel}
-                        </span>
-                        <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                        </svg>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className={`shrink-0 px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
+                            {statusLabel}
+                          </span>
+                          <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
                       </div>
                     </div>
-
-                    {/* Description */}
-                    {cl.taskChecklist?.description && (
-                      <p className="text-sm text-muted-foreground mb-2">{cl.taskChecklist.description}</p>
-                    )}
-
-                    {/* Time range */}
-                    {cl.taskChecklist?.startTime && (
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                        <span>🕐</span>
-                        <span>
-                          {cl.taskChecklist.startTime}
-                          {cl.taskChecklist.endTime ? ` - ${cl.taskChecklist.endTime}` : ''}
-                        </span>
-                      </div>
-                    )}
-
-                    {/* Notes */}
-                    {cl.notes ? (
-                      <p className="text-sm text-muted-foreground line-clamp-2">{cl.notes}</p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic">No notes</p>
-                    )}
-
-                    {/* Completed info */}
-                    {cl.completedByUser && (
-                      <p className="text-xs text-muted-foreground mt-2">
-                        Completed by: {cl.completedByUser.firstName} {cl.completedByUser.lastName}
-                      </p>
-                    )}
-                  </button>
-                )
-              })}
+                  )
+                })}
             </div>
           )}
         </div>
@@ -780,8 +789,8 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
 
       {/* ==== Created / Updated info ==== */}
       <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-4">
-        <span>Created: {new Date(taskExecution.createdAt).toLocaleString()}</span>
-        <span>Updated: {new Date(taskExecution.updatedAt).toLocaleString()}</span>
+        <span>Created: {formatDateTime(taskExecution.createdAt)}</span>
+        <span>Updated: {formatDateTime(taskExecution.updatedAt)}</span>
       </div>
 
       {/* ==== Complete Confirmation Modal — hidden when readOnly */}

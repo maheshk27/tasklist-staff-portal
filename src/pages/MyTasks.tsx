@@ -5,6 +5,7 @@ import { onboardingService, taskService } from '../services/apiManager'
 import type { StoreWithMapping } from '../types/user-store'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
+import { formatDate, formatTime } from '../utils/date'
 
 type TabType = 'today' | 'historical'
 
@@ -217,7 +218,7 @@ const MyTasks: React.FC = () => {
           </div>
         </div>
 
-        {task.mstTask?.startTime && (
+       {/*  {task.mstTask?.startTime && (
           <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
             <span>🕐</span>
             <span>
@@ -225,7 +226,13 @@ const MyTasks: React.FC = () => {
               {task.mstTask.endTime ? ` - ${task.mstTask.endTime}` : ''}
             </span>
           </div>
-        )}
+        )} */}
+
+        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+          <span>🕐</span>
+          <span>{formatDate(task.executionDate)}</span>
+          <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
+        </div>
 
         {task.mstTask?.description && (
           <p className="text-sm text-muted-foreground mb-2">{task.mstTask.description}</p>
@@ -310,8 +317,8 @@ const MyTasks: React.FC = () => {
             <button
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'today'
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               <span className="flex items-center gap-2">
@@ -325,8 +332,8 @@ const MyTasks: React.FC = () => {
             <button
               onClick={() => setActiveTab('historical')}
               className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'historical'
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               <span className="flex items-center gap-2">

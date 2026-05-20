@@ -3,6 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { taskService } from '../services/apiManager'
 import type { SurveyEntry } from '../types/daily-survey'
 import toast from 'react-hot-toast'
+import { formatDateTime } from '../utils/date'
 
 const SurveyEntryPage: React.FC = () => {
   const { dailySurveyId } = useParams<{ dailySurveyId: string }>()
@@ -195,8 +196,8 @@ const SurveyEntryPage: React.FC = () => {
   const notStartedCount = entries.filter(e => e.entryStatus === 'NOT_STARTED').length
   // const skippedCount = entries.filter(e => e.entryStatus === 'SKIPPED').length
 
-  const rackCleanCount = entries.filter(e => e.isRackClean).length
-  const boardAvailableCount = entries.filter(e => e.isBoardAvailable).length
+  const rackCleanCount = entries.filter(e => e.isRackClean === true && e.entryStatus === 'COMPLETED').length
+  const boardAvailableCount = entries.filter(e => e.isBoardAvailable === true && e.entryStatus === 'COMPLETED').length
 
   return (
     <div className="space-y-6">
@@ -470,7 +471,7 @@ const SurveyEntryPage: React.FC = () => {
                     entry.entryStatus === 'COMPLETED' && (
                       <div className="p-3 bg-green-50 border border-green-200 rounded-md text-green-800 text-sm">
                         Submitted By: {entry.submittedBy ? `${entry.submittedBy.firstName} ${entry.submittedBy.lastName}` : 'N/A'} <br />
-                        Submitted At: {entry.submittedAt ? new Date(entry.submittedAt).toLocaleString() : 'N/A'}
+                        Submitted At: {entry.submittedAt ? formatDateTime(entry.submittedAt) : 'N/A'}
                       </div>
                     )
                   }

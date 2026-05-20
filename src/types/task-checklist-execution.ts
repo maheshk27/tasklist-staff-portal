@@ -4,6 +4,8 @@ export interface TaskChecklistExecution {
   taskChecklistExecutionId: number
   taskExecutionId: number
   mstChecklistId: number
+  fromTime: string
+  toTime: string
   checklistStatus: ChecklistStatus
   notes?: string
   completedBy?: number

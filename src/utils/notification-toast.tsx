@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast'
 import NotificationToast from '../components/NotificationToast'
+import { formatTime } from './date';
 
 export function showNotificationToast(
   title: string,
@@ -8,12 +9,8 @@ export function showNotificationToast(
   duration = 8000,
   screenPath?: string,
 ) {
-  const timestamp = new Date().toLocaleTimeString('en-IN', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  })
-
+  const timestamp = formatTime(new Date())
+  
   toast.custom(
     (t: { id: string; visible: boolean }) => (
       <div

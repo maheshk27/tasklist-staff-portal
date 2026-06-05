@@ -524,10 +524,16 @@ export const notificationService = {
 // ==================== Ticket Service APIs ====================
 import type { 
   TicketResponseDto, 
-  TicketCategoryDto, 
+  TicketCategoryDto,
+  TicketPriorityDto, 
   CreateTicketDto, 
   UpdateTicketDto, 
-  TicketFilterParams 
+  TicketFilterParams,
+  TicketCommentResponseDto,
+  CreateTicketCommentDto,
+  UpdateTicketCommentDto,
+  TicketAttachmentResponseDto,
+  TicketStatusHistoryResponseDto
 } from '../types/ticket'
 
 export interface UpdateTicketStatusDto {
@@ -613,6 +619,170 @@ export const ticketService = {
       return response.data
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch categories'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get all ticket priorities
+   */
+  async getTicketPriorities(): Promise<ApiResponse<TicketPriorityDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketPriorityDto[]>>('/ticket-management/priorities')
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch priorities'
+      throw new Error(errorMessage)
+    }
+  },
+
+  // ==================== Ticket Status History APIs ====================
+
+  /**
+   * Get all status change history entries for a ticket
+   */
+  async getTicketStatusHistory(ticketId: number): Promise<ApiResponse<TicketStatusHistoryResponseDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketStatusHistoryResponseDto[]>>(`/tickets/${ticketId}/status-history`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch ticket status history'
+      throw new Error(errorMessage)
+    }
+  },
+
+  // ==================== Ticket Comment APIs ====================
+
+  /**
+   * Get all comments for a ticket
+   */
+  async getTicketComments(ticketId: number): Promise<ApiResponse<TicketCommentResponseDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketCommentResponseDto[]>>(`/tickets/${ticketId}/comments`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch ticket comments'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get a single ticket comment by ID
+   */
+  async getTicketComment(commentId: number): Promise<ApiResponse<TicketCommentResponseDto>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketCommentResponseDto>>(`/tickets/comments/${commentId}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch ticket comment'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Create a new ticket comment
+   */
+  async createTicketComment(data: CreateTicketCommentDto): Promise<ApiResponse<TicketCommentResponseDto>> {
+    try {
+      const response = await taskApi.post<ApiResponse<TicketCommentResponseDto>>('/tickets/comments', data)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create ticket comment'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Update a ticket comment by ID
+   */
+  async updateTicketComment(commentId: number, data: UpdateTicketCommentDto): Promise<ApiResponse<TicketCommentResponseDto>> {
+    try {
+      const response = await taskApi.put<ApiResponse<TicketCommentResponseDto>>(`/tickets/comments/${commentId}`, data)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update ticket comment'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Delete a ticket comment by ID
+   */
+  async deleteTicketComment(commentId: number): Promise<ApiResponse<void>> {
+    try {
+      const response = await taskApi.delete<ApiResponse<void>>(`/tickets/comments/${commentId}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete ticket comment'
+      throw new Error(errorMessage)
+    }
+  },
+
+  // ==================== Ticket Attachment APIs ====================
+
+  /**
+   * Get all attachments for a ticket
+   */
+  async getTicketAttachments(ticketId: number): Promise<ApiResponse<TicketAttachmentResponseDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketAttachmentResponseDto[]>>(`/tickets/${ticketId}/attachments`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch ticket attachments'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get a single ticket attachment by ID
+   */
+  async getTicketAttachment(attachmentId: number): Promise<ApiResponse<TicketAttachmentResponseDto>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketAttachmentResponseDto>>(`/tickets/attachments/${attachmentId}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch ticket attachment'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Upload attachment file for a ticket
+   * Uses FormData with multipart/form-data content type
+   */
+  async uploadTicketAttachment(ticketId: number, file: File, uploadedBy?: number): Promise<ApiResponse<TicketAttachmentResponseDto>> {
+    try {
+      const formData = new FormData()
+      formData.append('file', file)
+      if (uploadedBy) {
+        formData.append('uploadedBy', uploadedBy.toString())
+      }
+
+      const response = await taskApi.post<ApiResponse<TicketAttachmentResponseDto>>(
+        `/tickets/${ticketId}/attachments/upload`,
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        },
+      )
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to upload ticket attachment'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Delete a ticket attachment by ID
+   */
+  async deleteTicketAttachment(attachmentId: number): Promise<ApiResponse<void>> {
+    try {
+      const response = await taskApi.delete<ApiResponse<void>>(`/tickets/attachments/${attachmentId}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to delete ticket attachment'
       throw new Error(errorMessage)
     }
   },

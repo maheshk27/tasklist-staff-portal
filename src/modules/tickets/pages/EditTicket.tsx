@@ -2,11 +2,10 @@ import React, { useEffect, useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth'
 import { ticketService } from '../../../services/apiManager'
-import type { TicketResponseDto } from '../../../types/ticket'
+import type { TicketResponseDto, TicketPriorityDto } from '../../../types/ticket'
 import toast from 'react-hot-toast'
 
-const PRIORITY_OPTIONS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-const SEVERITY_OPTIONS = ['MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER']
+const SEVERITY_OPTIONS = ['Minor', 'Major', 'Critical', 'Blocker']
 
 const EditTicket: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -16,6 +15,7 @@ const EditTicket: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [ticket, setTicket] = useState<TicketResponseDto | null>(null)
+  const [priorities, setPriorities] = useState<TicketPriorityDto[]>([])
 
   const [formData, setFormData] = useState({
     title: '',
@@ -25,24 +25,33 @@ const EditTicket: React.FC = () => {
     resolutionNotes: '',
   })
 
-  // Fetch ticket data
+  // Fetch ticket data and priorities
   useEffect(() => {
     if (!id) return
     let cancelled = false
 
-    const fetchTicket = async () => {
+    const fetchData = async () => {
       setIsLoading(true)
       try {
-        const response = await ticketService.getTicket(Number(id))
-        if (!cancelled && response.data) {
-          setTicket(response.data)
+        const [ticketRes, prioritiesRes] = await Promise.all([
+          ticketService.getTicket(Number(id)),
+          ticketService.getTicketPriorities(),
+        ])
+        if (cancelled) return
+
+        if (ticketRes.data) {
+          setTicket(ticketRes.data)
           setFormData({
-            title: response.data.title,
-            description: response.data.description || '',
-            priority: response.data.priority || '',
-            severity: response.data.severity || '',
-            resolutionNotes: response.data.resolutionNotes || '',
+            title: ticketRes.data.title,
+            description: ticketRes.data.description || '',
+            priority: ticketRes.data.priority || '',
+            severity: ticketRes.data.severity || '',
+            resolutionNotes: ticketRes.data.resolutionNotes || '',
           })
+        }
+
+        if (prioritiesRes.data) {
+          setPriorities(prioritiesRes.data)
         }
       } catch {
         toast.error('Failed to load ticket')
@@ -50,7 +59,7 @@ const EditTicket: React.FC = () => {
         if (!cancelled) setIsLoading(false)
       }
     }
-    fetchTicket()
+    fetchData()
     return () => { cancelled = true }
   }, [id])
 
@@ -118,7 +127,7 @@ const EditTicket: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Edit Ticket</h1>
         <p className="text-muted-foreground mt-2">
@@ -128,7 +137,7 @@ const EditTicket: React.FC = () => {
 
       <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 shadow-sm space-y-5">
         {/* Ticket info (read-only) */}
-        <div className="grid grid-cols-2 gap-4 p-3 bg-muted/30 rounded-lg text-sm">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-3 bg-muted/30 rounded-lg text-sm">
           <div>
             <span className="text-muted-foreground">Store:</span>{' '}
             <span className="font-medium">{ticket.store?.storeName || 'N/A'}</span>
@@ -144,7 +153,7 @@ const EditTicket: React.FC = () => {
           {ticket.assignedToUser && (
             <div>
               <span className="text-muted-foreground">Assigned to:</span>{' '}
-              <span className="font-medium">{ticket.assignedToUser.userName}</span>
+              <span className="font-medium">{ticket.assignedToUser.firstName} {ticket.assignedToUser.lastName}</span>
             </div>
           )}
         </div>
@@ -188,8 +197,8 @@ const EditTicket: React.FC = () => {
               className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="">Select Priority</option>
-              {PRIORITY_OPTIONS.map(p => (
-                <option key={p} value={p}>{p}</option>
+              {priorities.map(p => (
+                <option key={p.id} value={p.name}>{`${p.name} (SLA: ${p.slaHours} Hours)`}</option>
               ))}
             </select>
           </div>
@@ -224,7 +233,14 @@ const EditTicket: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex justify-between gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/tickets/${id}`)}
+            className="px-6 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm"
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             disabled={isSubmitting}
@@ -239,13 +255,7 @@ const EditTicket: React.FC = () => {
               'Save Changes'
             )}
           </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/tickets/${id}`)}
-            className="px-6 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm"
-          >
-            Cancel
-          </button>
+          
         </div>
       </form>
     </div>

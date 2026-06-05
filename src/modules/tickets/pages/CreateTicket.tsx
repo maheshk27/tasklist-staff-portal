@@ -3,12 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth'
 import { onboardingService, ticketService } from '../../../services/apiManager'
 import { onboardingApi } from '../../../services/api'
-import type { TicketCategoryDto, DepartmentDto } from '../../../types/ticket'
+import type { TicketCategoryDto, DepartmentDto, TicketPriorityDto } from '../../../types/ticket'
 import type { StoreWithMapping } from '../../../types/user-store'
 import toast from 'react-hot-toast'
 
-const PRIORITY_OPTIONS = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL']
-const SEVERITY_OPTIONS = ['MINOR', 'MAJOR', 'CRITICAL', 'BLOCKER']
+const SEVERITY_OPTIONS = ['Minor', 'Major', 'Critical', 'Blocker']
 
 const CreateTicket: React.FC = () => {
   const { user } = useAuth()
@@ -17,6 +16,7 @@ const CreateTicket: React.FC = () => {
   const [stores, setStores] = useState<StoreWithMapping[]>([])
   const [categories, setCategories] = useState<TicketCategoryDto[]>([])
   const [departments, setDepartments] = useState<DepartmentDto[]>([])
+  const [priorities, setPriorities] = useState<TicketPriorityDto[]>([])
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
 
@@ -30,17 +30,18 @@ const CreateTicket: React.FC = () => {
     severity: '',
   })
 
-  // Fetch stores, categories and departments
+  // Fetch stores, categories, departments and priorities
   useEffect(() => {
     let cancelled = false
     const fetchData = async () => {
       if (!user) return
       setIsLoading(true)
       try {
-        const [storesRes, categoriesRes, deptRes] = await Promise.all([
+        const [storesRes, categoriesRes, deptRes, prioritiesRes] = await Promise.all([
           onboardingService.getUserStores(user.userId),
           ticketService.getTicketCategories(),
           onboardingApi.get('/departments'),
+          ticketService.getTicketPriorities(),
         ])
         if (cancelled) return
 
@@ -53,7 +54,12 @@ const CreateTicket: React.FC = () => {
         // Set departments from API
         const deptData: DepartmentDto[] = deptRes.data?.data || []
         setDepartments(deptData)
-        
+
+        // Set priorities from API
+        if (prioritiesRes.data) {
+          setPriorities(prioritiesRes.data)
+        }
+
         // Find Maintenance department and pre-select it
         const maintenanceDept = deptData.find((d: DepartmentDto) => d.departmentName === 'Maintenance')
         const deptId = maintenanceDept?.departmentId || (deptData.length > 0 ? deptData[0].departmentId : '')
@@ -143,74 +149,75 @@ const CreateTicket: React.FC = () => {
   }
 
   return (
-    <div className="max-w-2xl space-y-6">
+    <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-bold">Create New Ticket</h1>
         <p className="text-muted-foreground mt-2">Submit a new support ticket</p>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 shadow-sm space-y-5">
-        {/* Department Dropdown */}
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Department <span className="text-destructive">*</span>
-          </label>
-          <select
-            required
-            value={formData.departmentId}
-            // onChange={(e) => handleDepartmentChange(Number(e.target.value))}
-            disabled
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          >
-            <option value="">Select Department</option>
-            {departments.map(dept => (
-              <option key={dept.departmentId} value={dept.departmentId}>
-                {dept.departmentName}
-              </option>
-            ))}
-          </select>
-        </div>
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+          {/* Department Dropdown */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Department <span className="text-destructive">*</span>
+            </label>
+            <select
+              required
+              value={formData.departmentId}
+              // onChange={(e) => handleDepartmentChange(Number(e.target.value))}
+              disabled
+              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">Select Department</option>
+              {departments.map(dept => (
+                <option key={dept.departmentId} value={dept.departmentId}>
+                  {dept.departmentName}
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Store */}
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Store <span className="text-destructive">*</span>
-          </label>
-          <select
-            required
-            value={formData.storeId}
-            onChange={(e) => handleStoreChange(Number(e.target.value))}
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          >
-            <option value="">Select Store</option>
-            {stores.map(({ store }) => (
-              <option key={store.storeId} value={store.storeId}>
-                {store.storeName} ({store.storeCode})
-              </option>
-            ))}
-          </select>
-        </div>
+          {/* Store */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Store <span className="text-destructive">*</span>
+            </label>
+            <select
+              required
+              value={formData.storeId}
+              onChange={(e) => handleStoreChange(Number(e.target.value))}
+              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">Select Store</option>
+              {stores.map(({ store }) => (
+                <option key={store.storeId} value={store.storeId}>
+                  {store.storeName} ({store.storeCode})
+                </option>
+              ))}
+            </select>
+          </div>
 
-        {/* Category */}
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Category <span className="text-destructive">*</span>
-          </label>
-          <select
-            required
-            value={formData.ticketCategoryId}
-            onChange={(e) => updateField('ticketCategoryId', e.target.value)}
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          >
-            <option value="">Select Category</option>
-            {categories.map(cat => (
-              <option key={cat.ticketCategoryId} value={cat.ticketCategoryId}>
-                {cat.categoryName}
-              </option>
-            ))}
-          </select>
+          {/* Category */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Category <span className="text-destructive">*</span>
+            </label>
+            <select
+              required
+              value={formData.ticketCategoryId}
+              onChange={(e) => updateField('ticketCategoryId', e.target.value)}
+              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">Select Category</option>
+              {categories.map(cat => (
+                <option key={cat.ticketCategoryId} value={cat.ticketCategoryId}>
+                  {cat.categoryName}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
-
         {/* Title */}
         <div>
           <label className="block text-sm font-medium mb-1">
@@ -250,8 +257,8 @@ const CreateTicket: React.FC = () => {
               className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
             >
               <option value="">Select Priority</option>
-              {PRIORITY_OPTIONS.map(p => (
-                <option key={p} value={p}>{p}</option>
+              {priorities.map(p => (
+                <option key={p.id} value={p.name}>{`${p.name} (SLA: ${p.slaHours} Hours)`}</option>
               ))}
             </select>
           </div>
@@ -272,7 +279,14 @@ const CreateTicket: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="flex items-center gap-3 pt-2">
+        <div className="flex justify-between gap-3 pt-2">
+          <button
+            type="button"
+            onClick={() => navigate('/tickets')}
+            className="px-6 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm"
+          >
+            Cancel
+          </button>
           <button
             type="submit"
             disabled={isSubmitting}
@@ -286,13 +300,6 @@ const CreateTicket: React.FC = () => {
             ) : (
               'Create Ticket'
             )}
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate('/tickets')}
-            className="px-6 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm"
-          >
-            Cancel
           </button>
         </div>
       </form>

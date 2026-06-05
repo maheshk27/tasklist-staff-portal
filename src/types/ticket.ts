@@ -13,9 +13,9 @@ export interface TicketResponseDto {
   severity?: string;
   status: string;
   createdBy: number;
-  createdByUser?: { userId: number; userName: string };
+  createdByUser?: { userId: number; userName: string; firstName: string; lastName: string };
   assignedTo?: number;
-  assignedToUser?: { userId: number; userName: string };
+  assignedToUser?: { userId: number; userName: string; firstName: string; lastName: string };
   raisedAt?: string;
   assignedAt?: string;
   acknowledgedAt?: string;
@@ -32,6 +32,14 @@ export interface TicketCategoryDto {
   categoryName: string;
   description?: string;
   isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface TicketPriorityDto {
+  id: number;
+  name: string;
+  slaHours: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -71,4 +79,60 @@ export interface TicketFilterParams {
   assignedTo?: number;
   createdFrom?: string;
   createdTo?: string;
+}
+
+// =======================
+// Ticket Comment Types
+// =======================
+
+export interface TicketCommentResponseDto {
+  id: number;
+  ticketId: number;
+  comment: string;
+  createdBy: number;
+  createdByUser?: { userId: number; userName: string; firstName: string; lastName: string };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTicketCommentDto {
+  ticketId: number;
+  comment: string;
+  createdBy: number;
+}
+
+export interface UpdateTicketCommentDto {
+  comment: string;
+}
+
+// =======================
+// Ticket Attachment Types
+// =======================
+
+export interface TicketAttachmentResponseDto {
+  ticketAttachmentId: number;
+  ticketId: number;
+  fileName: string;
+  fileUrl: string;
+  attachmentType?: string;
+  uploadedBy: number;
+  uploadedByUser?: { userId: number; userName: string; firstName: string; lastName: string };
+  uploadedAt: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// =======================
+// Ticket Status History Types
+// =======================
+
+export interface TicketStatusHistoryResponseDto {
+  ticketHistoryId: number;
+  ticketId: number;
+  fromStatus?: string;
+  toStatus: string;
+  remarks?: string;
+  changedBy: number;
+  changedByUser?: { userId: number; userName: string; firstName: string; lastName: string };
+  createdAt: string;
 }

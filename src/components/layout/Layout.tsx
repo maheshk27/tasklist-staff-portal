@@ -134,7 +134,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex">
         {/* Sidebar */}
         <aside className={`${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-          } fixed inset-y-0 left-0 md:relative md:inset-y-auto md:translate-x-0 z-50 w-80 h-screen md:h-[calc(100vh-73px)] bg-card border-r border-border transition-transform duration-300 ease-in-out md:block`}>
+          } fixed inset-y-0 left-0 md:relative md:inset-y-auto md:translate-x-0 z-50 w-70 h-screen md:h-[calc(100vh-73px)] bg-card border-r border-border transition-transform duration-300 ease-in-out md:block`}>
           {/* Navigation Menu */}
           <nav className="p-4 flex flex-col h-full">
             {/* Logo at top - mobile only */}
@@ -253,7 +253,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         )}
 
         {/* Main Content */}
-        <main className="flex-1 min-h-[calc(100vh-73px)] p-6">
+        <main className="flex-1 min-w-0 min-h-[calc(100vh-73px)] p-6 overflow-hidden">
           {children}
         </main>
       </div>

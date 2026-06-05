@@ -39,6 +39,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems: MenuItem[] = [
     { title: 'Dashboard', icon: '📊', path: '/dashboard' },
+    { title: 'Tickets', icon: '🎫', path: '/tickets' },
     { title: 'My Tasks', icon: '✅', path: '/my-tasks' },
     { title: 'Team Tasks', icon: '👥', path: '/team-tasks' },
     { title: 'Daily Survey', icon: '📝', path: '/survey' },
@@ -103,9 +104,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <Link to="/" className="flex items-center gap-3">
-              <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
-            </Link>
+            <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
           </div>
 
           {/* Right Section: User Profile & Logout */}
@@ -140,9 +139,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <nav className="p-4 flex flex-col h-full">
             {/* Logo at top - mobile only */}
             <div className="mb-6 pb-4 border-b border-border flex justify-center md:hidden">
-              <Link to="/" className="flex items-center gap-3">
-                <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
-              </Link>
+              <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
             </div>
 
             {/* Menu items */}
@@ -183,8 +180,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                               to={child.path!}
                               onClick={() => setIsSidebarOpen(false)}
                               className={`block px-3 py-2 rounded-lg transition-all duration-200 text-sm ${isActivePath(child.path || '')
-                                  ? 'bg-primary/10 text-primary font-medium'
-                                  : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                                ? 'bg-primary/10 text-primary font-medium'
+                                : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                                 }`}
                             >
                               <span className="flex items-center gap-3">
@@ -202,8 +199,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                       to={item.path!}
                       onClick={() => setIsSidebarOpen(false)}
                       className={`block p-3 rounded-lg transition-all duration-200 ${isActivePath(item.path || '')
-                          ? 'bg-primary/10 text-primary'
-                          : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                        ? 'bg-primary/10 text-primary'
+                        : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         }`}
                     >
                       <span className="flex items-center gap-3">

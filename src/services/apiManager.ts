@@ -521,6 +521,103 @@ export const notificationService = {
   },
 }
 
+// ==================== Ticket Service APIs ====================
+import type { 
+  TicketResponseDto, 
+  TicketCategoryDto, 
+  CreateTicketDto, 
+  UpdateTicketDto, 
+  TicketFilterParams 
+} from '../types/ticket'
+
+export interface UpdateTicketStatusDto {
+  status: string
+  remarks?: string
+  changedBy: number
+}
+
+export const ticketService = {
+  /**
+   * Get all tickets with optional filters
+   */
+  async getTickets(filters?: TicketFilterParams): Promise<ApiResponse<TicketResponseDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketResponseDto[]>>('/tickets', {
+        params: filters,
+      })
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch tickets'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get a single ticket by ID
+   */
+  async getTicket(id: number): Promise<ApiResponse<TicketResponseDto>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketResponseDto>>(`/tickets/${id}`)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch ticket'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Create a new ticket
+   */
+  async createTicket(data: CreateTicketDto): Promise<ApiResponse<TicketResponseDto>> {
+    try {
+      const response = await taskApi.post<ApiResponse<TicketResponseDto>>('/tickets', data)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create ticket'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Update a ticket by ID
+   */
+  async updateTicket(id: number, data: UpdateTicketDto): Promise<ApiResponse<TicketResponseDto>> {
+    try {
+      const response = await taskApi.put<ApiResponse<TicketResponseDto>>(`/tickets/${id}`, data)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update ticket'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Update ticket status
+   */
+  async updateTicketStatus(id: number, data: UpdateTicketStatusDto): Promise<ApiResponse<TicketResponseDto>> {
+    try {
+      const response = await taskApi.put<ApiResponse<TicketResponseDto>>(`/tickets/${id}/status`, data)
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to update ticket status'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get all ticket categories
+   */
+  async getTicketCategories(): Promise<ApiResponse<TicketCategoryDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketCategoryDto[]>>('/ticket-management/categories')
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch categories'
+      throw new Error(errorMessage)
+    }
+  },
+}
+
 export default {
   onboarding: onboardingService,
 }

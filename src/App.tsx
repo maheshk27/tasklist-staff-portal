@@ -11,6 +11,10 @@ import Settings from './pages/Settings'
 import ChangePassword from './pages/ChangePassword'
 import MyTasks from './pages/MyTasks'
 import TeamTasks from './pages/TeamTasks'
+import TicketList from './modules/tickets/pages/TicketList'
+import TicketDetail from './modules/tickets/pages/TicketDetail'
+import CreateTicket from './modules/tickets/pages/CreateTicket'
+import EditTicket from './modules/tickets/pages/EditTicket'
 import TaskExecutionDetail from './pages/TaskExecutionDetail'
 import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
 import SurveyList from './pages/SurveyList'
@@ -85,6 +89,28 @@ function App() {
         <Route path="/survey/:dailySurveyId" element={
           <ProtectedRoute>
             <Layout><SurveyEntryPage /></Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* Ticket routes */}
+        <Route path="/tickets" element={
+          <ProtectedRoute>
+            <Layout><TicketList /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/tickets/create" element={
+          <ProtectedRoute>
+            <Layout><CreateTicket /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/tickets/:id" element={
+          <ProtectedRoute>
+            <Layout><TicketDetail /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/tickets/:id/edit" element={
+          <ProtectedRoute>
+            <Layout><EditTicket /></Layout>
           </ProtectedRoute>
         } />
       </Routes>

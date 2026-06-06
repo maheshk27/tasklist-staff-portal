@@ -542,7 +542,7 @@ const TicketList: React.FC = () => {
               </div>
               <div className="p-3 space-y-2 flex-1 overflow-y-auto max-h-[calc(100vh-400px)]">
                 {columnTickets.length === 0 ? (
-                  <div className="text-center py-8 text-xs text-muted-foreground">No tickets</div>
+                  <div className="text-center py-8 text-md text-muted-foreground">No tickets</div>
                 ) : (
                   columnTickets.map(t => renderTicketCard(t, true))
                 )}

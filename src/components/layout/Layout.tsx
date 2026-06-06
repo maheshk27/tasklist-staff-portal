@@ -69,7 +69,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (path === '/dashboard') {
       return location.pathname === '/dashboard'
     }
-    return location.pathname.startsWith(path)
+    //return location.pathname.startsWith(path)
+    return location.pathname === path
   }
 
   const isMenuActive = (menuItem: MenuItem) => {
@@ -151,7 +152,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <div>
                       <button
                         onClick={() => toggleMenu(item.title)}
-                        className={`w-full text-left p-3 rounded-lg transition-all duration-200 flex items-center justify-between ${isMenuActive(item) ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
+                        className={`w-full text-left p-1 rounded-lg transition-all duration-200 flex items-center justify-between ${isMenuActive(item) ? 'bg-primary/10 text-primary' : 'hover:bg-muted'
                           }`}
                       >
                         <div className="flex items-center gap-3">
@@ -198,7 +199,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                     <Link
                       to={item.path!}
                       onClick={() => setIsSidebarOpen(false)}
-                      className={`block p-3 rounded-lg transition-all duration-200 ${isActivePath(item.path || '')
+                      className={`block p-1 rounded-lg transition-all duration-200 ${isActivePath(item.path || '')
                         ? 'bg-primary/10 text-primary'
                         : 'text-muted-foreground hover:bg-muted hover:text-foreground'
                         }`}

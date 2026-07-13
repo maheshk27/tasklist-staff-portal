@@ -57,7 +57,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item => {
     if (item.title === 'Team Tasks') {
-      return user?.role?.roleName?.toUpperCase() === 'CLUSTER HEAD' || user?.role?.roleName?.toUpperCase() === 'BRANCH MANAGER'
+      return user?.role?.roleName?.toUpperCase() === 'AREA MANAGER (AM)' || user?.role?.roleName?.toUpperCase() === 'BRANCH MANAGER (BM)'
     }
     return true
   })

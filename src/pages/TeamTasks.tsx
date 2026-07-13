@@ -42,7 +42,7 @@ const TeamTasks: React.FC = () => {
 
   // Check user role - only CLUSTER HEAD and BRANCH MANAGER can access
   useEffect(() => {
-    if (!user || (user.role?.roleName?.toUpperCase() !== 'CLUSTER HEAD' && user.role?.roleName?.toUpperCase() !== 'BRANCH MANAGER')) {
+    if (!user || (user.role?.roleName?.toUpperCase() !== 'AREA MANAGER (AM)' && user.role?.roleName?.toUpperCase() !== 'BRANCH MANAGER (BM)')) {
       navigate('/dashboard')
     }
   }, [user, navigate])

@@ -239,13 +239,16 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
     setIsUploading(true)
     let uploadedCount = 0
     let errorCount = 0
+    // TEMP DIAGNOSTICS — keep the real reasons so the toast can show them
+    const failureReasons: string[] = []
 
     for (let i = 0; i < files.length; i++) {
       try {
         await taskService.uploadTaskEvidence(taskExecution.taskExecutionId, files[i])
         uploadedCount++
-      } catch {
+      } catch (err) {
         errorCount++
+        failureReasons.push(err instanceof Error ? err.message : 'Unknown error')
       }
     }
 
@@ -264,7 +267,12 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
     }
 
     if (errorCount > 0) {
-      toast.error(`${errorCount} file${errorCount > 1 ? 's' : ''} failed to upload`)
+      // TEMP DIAGNOSTICS — show the actual reason; staff test on mobile and
+      // cannot open a browser console to read it.
+      toast.error(
+        `${errorCount} file${errorCount > 1 ? 's' : ''} failed to upload: ${failureReasons.join('; ')}`,
+        { duration: 10000 },
+      )
     }
 
     setIsUploading(false)

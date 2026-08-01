@@ -23,6 +23,57 @@ export interface ApiResponse<T = unknown> {
   }>
 }
 
+/**
+ * TEMP DIAGNOSTICS — evidence upload failure investigation (client reported
+ * "1 file failed to upload"). Axios reports a timeout, a network drop and a
+ * server rejection with near-identical messages, so this pulls out the real
+ * cause, logs the full detail, and returns a message safe to show in a toast
+ * (staff test on mobile and cannot open a browser console).
+ */
+function describeUploadError(error: unknown, context: string): string {
+  const err = error as {
+    code?: string
+    message?: string
+    response?: { status?: number; data?: { message?: string; code?: string } }
+  }
+
+  const status = err?.response?.status
+  const serverMessage = err?.response?.data?.message
+
+  console.error(`[EVIDENCE-UPLOAD] ${context} failed`, {
+    axiosCode: err?.code,
+    axiosMessage: err?.message,
+    httpStatus: status,
+    serverCode: err?.response?.data?.code,
+    serverMessage,
+  })
+
+  if (err?.code === 'ECONNABORTED') {
+    return 'Upload timed out after 10s — network too slow or file too large'
+  }
+  if (err?.code === 'ERR_NETWORK') {
+    return 'Network error — upload never reached the server'
+  }
+  if (serverMessage) {
+    return status ? `${serverMessage} (HTTP ${status})` : serverMessage
+  }
+  return err?.message || 'Failed to upload evidence'
+}
+
+/**
+ * TEMP DIAGNOSTICS — logs what the browser handed us for the picked file.
+ * Confirms whether camera photos are over the 5MB server limit.
+ */
+function logSelectedFile(context: string, file: File): void {
+  console.log(`[EVIDENCE-UPLOAD] ${context} uploading file`, {
+    name: file.name,
+    type: file.type,
+    bytes: file.size,
+    sizeMb: +(file.size / (1024 * 1024)).toFixed(2),
+    lastModified: new Date(file.lastModified).toISOString(),
+  })
+}
+
 export interface ChangePasswordRequest {
   currentPassword: string
   newPassword: string
@@ -363,6 +414,10 @@ export const taskService = {
    * Uses FormData with multipart/form-data content type
    */
   async uploadTaskEvidence(taskExecutionId: number, file: File): Promise<ApiResponse<EvidenceResponseDto>> {
+    const context = `task-execution:${taskExecutionId}`
+    const startedAt = Date.now()
+    logSelectedFile(context, file)
+
     try {
       const formData = new FormData()
       formData.append('file', file)
@@ -376,10 +431,10 @@ export const taskService = {
           },
         },
       )
+      console.log(`[EVIDENCE-UPLOAD] ${context} succeeded in ${Date.now() - startedAt}ms`)
       return response.data
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload evidence'
-      throw new Error(errorMessage)
+      throw new Error(describeUploadError(error, `${context} after ${Date.now() - startedAt}ms`))
     }
   },
 
@@ -388,6 +443,10 @@ export const taskService = {
    * Uses FormData with multipart/form-data content type
    */
   async uploadChecklistEvidence(checklistExecutionId: number, file: File): Promise<ApiResponse<EvidenceResponseDto>> {
+    const context = `checklist-execution:${checklistExecutionId}`
+    const startedAt = Date.now()
+    logSelectedFile(context, file)
+
     try {
       const formData = new FormData()
       formData.append('file', file)
@@ -401,10 +460,10 @@ export const taskService = {
           },
         },
       )
+      console.log(`[EVIDENCE-UPLOAD] ${context} succeeded in ${Date.now() - startedAt}ms`)
       return response.data
     } catch (error: unknown) {
-      const errorMessage = error instanceof Error ? error.message : 'Failed to upload evidence'
-      throw new Error(errorMessage)
+      throw new Error(describeUploadError(error, `${context} after ${Date.now() - startedAt}ms`))
     }
   },
 

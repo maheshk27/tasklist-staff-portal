@@ -4,6 +4,7 @@
  */
 
 import { decodeToken, getStoredTokens } from '../utils/auth'
+import { compressImage } from '../utils/image-compression'
 import { onboardingApi, taskApi, notificationApi } from './api'
 import type { LoginRequest, AuthResponse, User } from '../types/auth'
 import type { UserStoresResponseDto } from '../types/user-store'
@@ -49,7 +50,7 @@ function describeUploadError(error: unknown, context: string): string {
   })
 
   if (err?.code === 'ECONNABORTED') {
-    return 'Upload timed out after 10s — network too slow or file too large'
+    return `Upload timed out after ${UPLOAD_TIMEOUT_MS / 1000}s — please check your network and try again`
   }
   if (err?.code === 'ERR_NETWORK') {
     return 'Network error — upload never reached the server'
@@ -72,6 +73,28 @@ function logSelectedFile(context: string, file: File): void {
     sizeMb: +(file.size / (1024 * 1024)).toFixed(2),
     lastModified: new Date(file.lastModified).toISOString(),
   })
+}
+
+/**
+ * Uploads run over a store's mobile connection and can take far longer than a
+ * normal API call, so they get their own timeout instead of the 10s default
+ * applied to every other request.
+ */
+const UPLOAD_TIMEOUT_MS = 60000
+
+/** Downscale camera photos before upload and log what the compression achieved. */
+async function prepareUploadFile(context: string, file: File): Promise<File> {
+  const prepared = await compressImage(file)
+
+  if (prepared !== file) {
+    console.log(`[EVIDENCE-UPLOAD] ${context} compressed image`, {
+      originalMb: +(file.size / (1024 * 1024)).toFixed(2),
+      compressedMb: +(prepared.size / (1024 * 1024)).toFixed(2),
+      saved: `${Math.round((1 - prepared.size / file.size) * 100)}%`,
+    })
+  }
+
+  return prepared
 }
 
 export interface ChangePasswordRequest {
@@ -419,8 +442,9 @@ export const taskService = {
     logSelectedFile(context, file)
 
     try {
+      const uploadFile = await prepareUploadFile(context, file)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', uploadFile)
 
       const response = await taskApi.post<ApiResponse<EvidenceResponseDto>>(
         `/evidence/task-execution/${taskExecutionId}/upload`,
@@ -429,6 +453,7 @@ export const taskService = {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          timeout: UPLOAD_TIMEOUT_MS,
         },
       )
       console.log(`[EVIDENCE-UPLOAD] ${context} succeeded in ${Date.now() - startedAt}ms`)
@@ -448,8 +473,9 @@ export const taskService = {
     logSelectedFile(context, file)
 
     try {
+      const uploadFile = await prepareUploadFile(context, file)
       const formData = new FormData()
-      formData.append('file', file)
+      formData.append('file', uploadFile)
 
       const response = await taskApi.post<ApiResponse<EvidenceResponseDto>>(
         `/evidence/task-checklist-execution/${checklistExecutionId}/upload`,
@@ -458,6 +484,7 @@ export const taskService = {
           headers: {
             'Content-Type': 'multipart/form-data',
           },
+          timeout: UPLOAD_TIMEOUT_MS,
         },
       )
       console.log(`[EVIDENCE-UPLOAD] ${context} succeeded in ${Date.now() - startedAt}ms`)

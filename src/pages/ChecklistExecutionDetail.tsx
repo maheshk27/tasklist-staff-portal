@@ -208,9 +208,12 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
       docInput.value = ''
     }
 
+    // Always refresh: a request can complete server-side even when the client
+    // gives up on it, so the list must reflect what was actually stored.
+    await fetchEvidence()
+
     if (uploadedCount > 0) {
       toast.success(`${uploadedCount} file${uploadedCount > 1 ? 's' : ''} uploaded successfully`)
-      await fetchEvidence()
     }
 
     if (errorCount > 0) {

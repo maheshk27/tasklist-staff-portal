@@ -364,6 +364,155 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
         </div>
       </div>
 
+      {/* ==== Activity Card (Action + Timeline + Completed By) ==== */}
+      <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
+        <div className="px-6 py-4 border-b border-border">
+          <h2 className="text-base font-semibold text-foreground">Activity</h2>
+        </div>
+        <div className="p-6">
+          {/* Action section — hidden when readOnly */}
+          {!readOnly && (
+          <div className="mb-6 pb-6 border-b border-border">
+            {effectiveStatus === 'not_started' && (
+              <div className="text-center">
+                <div className="text-3xl mb-3">⏳</div>
+                {isTimeToStart(checklistExecution.fromTime) ? (
+                  <>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      This checklist is pending. Start it to begin working.
+                    </p>
+                    <ActionButton
+                      action="signin"
+                      layout="grid"
+                      title="Start Task"
+                      onClick={handleStartTask}
+                      disabled={isStarting}
+                    />
+                  </>
+                ) : (
+                  <>
+                    <p className="text-sm text-orange-500 font-medium mb-1">
+                      ⏰ Checklist starts at {formatTime(checklistExecution.fromTime)}
+                    </p>
+                    <p className="text-xs text-muted-foreground mb-4">
+                      Please wait until the scheduled start time to begin.
+                    </p>
+                    <ActionButton
+                      action="signin"
+                      layout="grid"
+                      title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                      onClick={handleStartTask}
+                      disabled={true}
+                    />
+                  </>
+                )}
+              </div>
+            )}
+
+            {effectiveStatus === 'in_progress' && (
+              <div className="text-center">
+                <div className="text-3xl mb-3">🔄</div>
+                <p className="text-sm text-muted-foreground mb-1">
+                  Task is in progress.
+                </p>
+                {checklistExecution.startedAt && (
+                  <p className="text-xs text-muted-foreground mb-4">
+                    Started at: { formatDateTime(checklistExecution.startedAt) }
+                  </p>
+                )}
+              <ActionButton
+                action="activate"
+                layout="grid"
+                title="Complete Task"
+                onClick={() => setShowCompleteConfirm(true)}
+                disabled={isCompleting}
+              />
+              </div>
+            )}
+
+            {effectiveStatus === 'completed' && (
+              <div className="text-center">
+                <div className="text-3xl mb-3">🎉</div>
+                <p className="text-sm text-green-600 font-medium">Checklist completed</p>
+                {checklistExecution.completedAt && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Completed at: {formatDateTime(checklistExecution.completedAt)}
+                  </p>
+                )}
+                {checklistExecution.completedByUser && (
+                  <p className="text-xs text-muted-foreground">
+                    by {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
+                  </p>
+                )}
+              </div>
+            )}
+          </div>
+          )}
+
+          {/* Timeline section */}
+          <div className="mb-6 pb-6 border-b border-border">
+            <h3 className="text-sm font-semibold text-foreground mb-4">Timeline</h3>
+            <div className="relative">
+              <div className="absolute left-[7px] top-1 bottom-1 w-0.5 bg-border" />
+              <div className="space-y-6 relative">
+                <div className="flex items-start gap-4">
+                  <div className="w-[17px] shrink-0 flex justify-center relative z-10">
+                    <div className={`w-3 h-3 rounded-full ring-2 ${
+                      effectiveStatus === 'not_started' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
+                    }`} />
+                  </div>
+                  <div className="flex-1 pt-0">
+                    <p className="text-sm font-medium text-foreground">Started</p>
+                    {checklistExecution.startedAt ? (
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {formatDateTime(checklistExecution.startedAt)}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic mt-0.5">Not started yet</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-start gap-4">
+                  <div className="w-[17px] shrink-0 flex justify-center relative z-10">
+                    <div className={`w-3 h-3 rounded-full ring-2 ${
+                      effectiveStatus === 'completed' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
+                    }`} />
+                  </div>
+                  <div className="flex-1 pt-0">
+                    <p className="text-sm font-medium text-foreground">Completed</p>
+                    {checklistExecution.completedAt ? (
+                      <p className="text-sm text-muted-foreground mt-0.5">
+                        {formatDateTime(checklistExecution.completedAt)}
+                      </p>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic mt-0.5">Not completed yet</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Completed By section */}
+          {checklistExecution.completedByUser && (
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Completed By</h3>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm shadow-sm">
+                  {checklistExecution.completedByUser.firstName?.[0] || 'U'}
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">
+                    {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">@{checklistExecution.completedByUser.userName}</p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* ==== Notes Card ==== */}
       <div className="bg-card border border-border rounded-lg shadow-sm">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
@@ -526,155 +675,6 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                   )}
                 </div>
               ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ==== Activity Card (Action + Timeline + Completed By) ==== */}
-      <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-base font-semibold text-foreground">Activity</h2>
-        </div>
-        <div className="p-6">
-          {/* Action section — hidden when readOnly */}
-          {!readOnly && (
-          <div className="mb-6 pb-6 border-b border-border">
-            {effectiveStatus === 'not_started' && (
-              <div className="text-center">
-                <div className="text-3xl mb-3">⏳</div>
-                {isTimeToStart(checklistExecution.fromTime) ? (
-                  <>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      This checklist is pending. Start it to begin working.
-                    </p>
-                    <ActionButton
-                      action="signin"
-                      layout="grid"
-                      title="Start Task"
-                      onClick={handleStartTask}
-                      disabled={isStarting}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-orange-500 font-medium mb-1">
-                      ⏰ Checklist starts at {formatTime(checklistExecution.fromTime)}
-                    </p>
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Please wait until the scheduled start time to begin.
-                    </p>
-                    <ActionButton
-                      action="signin"
-                      layout="grid"
-                      title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
-                      onClick={handleStartTask}
-                      disabled={true}
-                    />
-                  </>
-                )}
-              </div>
-            )}
-
-            {effectiveStatus === 'in_progress' && (
-              <div className="text-center">
-                <div className="text-3xl mb-3">🔄</div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Task is in progress.
-                </p>
-                {checklistExecution.startedAt && (
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Started at: { formatDateTime(checklistExecution.startedAt) }
-                  </p>
-                )}
-              <ActionButton
-                action="activate"
-                layout="grid"
-                title="Complete Task"
-                onClick={() => setShowCompleteConfirm(true)}
-                disabled={isCompleting}
-              />
-              </div>
-            )}
-
-            {effectiveStatus === 'completed' && (
-              <div className="text-center">
-                <div className="text-3xl mb-3">🎉</div>
-                <p className="text-sm text-green-600 font-medium">Checklist completed</p>
-                {checklistExecution.completedAt && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Completed at: {formatDateTime(checklistExecution.completedAt)}
-                  </p>
-                )}
-                {checklistExecution.completedByUser && (
-                  <p className="text-xs text-muted-foreground">
-                    by {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
-          )}
-
-          {/* Timeline section */}
-          <div className="mb-6 pb-6 border-b border-border">
-            <h3 className="text-sm font-semibold text-foreground mb-4">Timeline</h3>
-            <div className="relative">
-              <div className="absolute left-[7px] top-1 bottom-1 w-0.5 bg-border" />
-              <div className="space-y-6 relative">
-                <div className="flex items-start gap-4">
-                  <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${
-                      effectiveStatus === 'not_started' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
-                    }`} />
-                  </div>
-                  <div className="flex-1 pt-0">
-                    <p className="text-sm font-medium text-foreground">Started</p>
-                    {checklistExecution.startedAt ? (
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {formatDateTime(checklistExecution.startedAt)}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic mt-0.5">Not started yet</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${
-                      effectiveStatus === 'completed' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
-                    }`} />
-                  </div>
-                  <div className="flex-1 pt-0">
-                    <p className="text-sm font-medium text-foreground">Completed</p>
-                    {checklistExecution.completedAt ? (
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {formatDateTime(checklistExecution.completedAt)}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic mt-0.5">Not completed yet</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Completed By section */}
-          {checklistExecution.completedByUser && (
-            <div>
-              <h3 className="text-sm font-semibold text-foreground mb-3">Completed By</h3>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm shadow-sm">
-                  {checklistExecution.completedByUser.firstName?.[0] || 'U'}
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">
-                    {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">@{checklistExecution.completedByUser.userName}</p>
-                </div>
-              </div>
             </div>
           )}
         </div>

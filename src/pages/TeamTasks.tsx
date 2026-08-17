@@ -29,6 +29,9 @@ const TeamTasks: React.FC = () => {
   // Tabs
   const [activeTab, setActiveTab] = useState<TabType>('today')
 
+  // Status filter (from summary click)
+  const [statusFilter, setStatusFilter] = useState<TaskExecutionStatus | null>(null)
+
   // Today's tasks
   const [todaysTasks, setTodaysTasks] = useState<TaskExecution[]>([])
   const [isLoadingTodaysTasks, setIsLoadingTodaysTasks] = useState(false)
@@ -407,7 +410,7 @@ const TeamTasks: React.FC = () => {
     )
   }
 
-  // Render status summary (counts per status)
+  // Render status summary (counts per status) — clickable to filter the list
   const renderStatusSummary = (tasks: TaskExecution[]) => {
     if (tasks.length === 0) return null
     const statusCounts = ALL_TASK_STATUSES.reduce<Record<TaskExecutionStatus, number>>(
@@ -418,19 +421,34 @@ const TeamTasks: React.FC = () => {
       {} as Record<TaskExecutionStatus, number>,
     )
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-        {ALL_TASK_STATUSES.map((status) => (
-          <div
-            key={status}
-            className={`rounded-lg border p-3 text-center ${TASK_STATUS_BOARD_COLORS[status]}`}
-          >
-            <div className="text-2xl font-bold text-foreground">{statusCounts[status]}</div>
-            <div className="text-xs font-medium text-muted-foreground mt-0.5">
-              {TASK_STATUS_LABELS[status]}
-            </div>
+      <>
+        {statusFilter && (
+          <div className="flex justify-end mb-2">
+            <button
+              onClick={() => setStatusFilter(null)}
+              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
+            >
+              ← Show All
+            </button>
           </div>
-        ))}
-      </div>
+        )}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+          {ALL_TASK_STATUSES.map((status) => (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+              className={`rounded-lg border p-3 text-center transition-colors ${TASK_STATUS_BOARD_COLORS[status]} ${
+                statusFilter === status ? 'ring-2 ring-primary' : 'hover:opacity-80'
+              }`}
+            >
+              <div className="text-2xl font-bold text-foreground">{statusCounts[status]}</div>
+              <div className="text-xs font-medium text-muted-foreground mt-0.5">
+                {TASK_STATUS_LABELS[status]}
+              </div>
+            </button>
+          ))}
+        </div>
+      </>
     )
   }
 
@@ -444,7 +462,7 @@ const TeamTasks: React.FC = () => {
         <div className="border-b border-border">
           <div className="flex">
             <button
-              onClick={() => setActiveTab('today')}
+              onClick={() => { setActiveTab('today'); setStatusFilter(null) }}
               className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'today'
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -459,7 +477,7 @@ const TeamTasks: React.FC = () => {
               )}
             </button>
             <button
-              onClick={() => setActiveTab('historical')}
+              onClick={() => { setActiveTab('historical'); setStatusFilter(null) }}
               className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'historical'
                 ? 'text-primary'
                 : 'text-muted-foreground hover:text-foreground'
@@ -491,7 +509,7 @@ const TeamTasks: React.FC = () => {
               {renderStatusSummary(todaysTasks)}
               <div className="mt-4">
                 {renderTaskList(
-                  todaysTasks,
+                  statusFilter ? todaysTasks.filter((t) => t.executionStatus === statusFilter) : todaysTasks,
                   isLoadingTodaysTasks,
                   todaysTasksError,
                   'No tasks scheduled for today at this store.',
@@ -533,7 +551,7 @@ const TeamTasks: React.FC = () => {
                   {renderStatusSummary(historicalTasks)}
                   <div className="mt-4">
                     {renderTaskList(
-                      historicalTasks,
+                      statusFilter ? historicalTasks.filter((t) => t.executionStatus === statusFilter) : historicalTasks,
                       isLoadingHistoricalTasks,
                       historicalTasksError,
                       'No tasks found for the selected date.',

@@ -48,6 +48,9 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
   // Complete confirmation modal
   const [showCompleteConfirm, setShowCompleteConfirm] = useState(false)
 
+  // Checklist status filter (from summary click)
+  const [checklistStatusFilter, setChecklistStatusFilter] = useState<ChecklistStatus | null>(null)
+
   // Fetch task execution
   useEffect(() => {
     if (!taskExecutionId) return
@@ -207,6 +210,11 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
   const status = taskExecution.executionStatus as TaskExecutionStatus
   const statusColorClass = TASK_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800'
   const statusLabel = TASK_STATUS_LABELS[status] || taskExecution.executionStatus
+
+  // Filtered checklists based on the selected status summary filter
+  const filteredChecklists = checklistStatusFilter
+    ? checklistExecutions.filter((cl) => cl.checklistStatus === checklistStatusFilter)
+    : checklistExecutions
 
   return (
     <div className="space-y-6">
@@ -420,22 +428,35 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
           </h2>
         </div>
 
-        {/* Status-wise summary count */}
+        {/* Status-wise summary count — clickable to filter the list */}
         {!isLoadingChecklists && checklistExecutions.length > 0 && (
-          <div className="px-6 py-3 border-b border-border flex flex-wrap gap-2">
-            {ALL_CHECKLIST_STATUSES.map((s) => {
-              const count = checklistExecutions.filter((cl) => cl.checklistStatus === s).length
-              if (count === 0) return null
-              return (
-                <span
-                  key={s}
-                  className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${CHECKLIST_STATUS_COLORS[s]}`}
+          <div className="px-6 py-3 border-b border-border">
+            <div className="flex flex-wrap items-center gap-2">
+              {checklistStatusFilter && (
+                <button
+                  onClick={() => setChecklistStatusFilter(null)}
+                  className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline mr-1"
                 >
-                  {CHECKLIST_STATUS_LABELS[s]}
-                  <span className="font-bold">{count}</span>
-                </span>
-              )
-            })}
+                  ← Show All
+                </button>
+              )}
+              {ALL_CHECKLIST_STATUSES.map((s) => {
+                const count = checklistExecutions.filter((cl) => cl.checklistStatus === s).length
+                if (count === 0) return null
+                return (
+                  <button
+                    key={s}
+                    onClick={() => setChecklistStatusFilter(checklistStatusFilter === s ? null : s)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${CHECKLIST_STATUS_COLORS[s]} ${
+                      checklistStatusFilter === s ? 'ring-2 ring-primary' : 'hover:opacity-80'
+                    }`}
+                  >
+                    {CHECKLIST_STATUS_LABELS[s]}
+                    <span className="font-bold">{count}</span>
+                  </button>
+                )
+              })}
+            </div>
           </div>
         )}
 
@@ -453,9 +474,20 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
               <div className="text-4xl mb-4">✅</div>
               <p className="text-muted-foreground">No checklists for this task.</p>
             </div>
+          ) : filteredChecklists.length === 0 ? (
+            <div className="text-center py-8">
+              <div className="text-4xl mb-4">🔍</div>
+              <p className="text-muted-foreground">No checklists match the selected status.</p>
+              <button
+                onClick={() => setChecklistStatusFilter(null)}
+                className="mt-3 text-sm text-primary hover:underline"
+              >
+                ← Show All
+              </button>
+            </div>
           ) : (
             <div className="space-y-4">
-              {[...checklistExecutions]
+              {[...filteredChecklists]
                 .sort((a, b) => (a.taskChecklist?.sequence ?? 999) - (b.taskChecklist?.sequence ?? 999))
                 .map((cl) => {
                   const checklistStatus = cl.checklistStatus as ChecklistStatus

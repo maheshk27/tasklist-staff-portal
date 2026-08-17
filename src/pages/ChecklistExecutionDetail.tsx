@@ -11,6 +11,17 @@ import { formatDateTime, formatTime, isTimeToStart } from '../utils/date'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
+// Helper to get the badge color for a checklist priority
+const getPriorityColor = (priority?: string): string => {
+  switch (priority) {
+    case 'CRITICAL': return 'bg-red-100 text-red-700'
+    case 'HIGH': return 'bg-orange-100 text-orange-700'
+    case 'MEDIUM': return 'bg-yellow-100 text-yellow-700'
+    case 'LOW': return 'bg-green-100 text-green-700'
+    default: return 'bg-gray-100 text-gray-600'
+  }
+}
+
 interface ChecklistExecutionDetailProps {
   readOnly?: boolean
 }
@@ -134,6 +145,14 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   // Complete task
   const handleCompleteTask = async () => {
     if (!checklistExecutionId || isCompleting) return
+
+    // If proof/evidence is mandatory, the checklist cannot be completed
+    // without at least one evidence file uploaded.
+    if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+      toast.error('Please upload the required evidence before completing this checklist.')
+      return
+    }
+
     const userId = getCurrentUserId()
 
     setIsCompleting(true)
@@ -271,6 +290,12 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
     )
   }
 
+  // Derived checklist config from the linked TaskChecklist
+  const checklistPriority = checklistExecution.taskChecklist?.priority
+  const isProofMandatory = checklistExecution.taskChecklist?.proofMandatory === true
+  const uploadType = checklistExecution.taskChecklist?.uploadType || 'PHOTO'
+  const isPhotoUpload = uploadType === 'PHOTO'
+
   return (
     <div className="space-y-6">
       {/* Header with back */}
@@ -300,6 +325,11 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
               {checklistExecution.taskChecklist?.isMandatory && (
                 <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
                   <span>●</span> Mandatory
+                </span>
+              )}
+              {checklistPriority && (
+                <span className={`inline-flex items-center gap-1 mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${getPriorityColor(checklistPriority)}`}>
+                  🚩 {checklistPriority}
                 </span>
               )}
             </div>
@@ -424,7 +454,13 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                 action="activate"
                 layout="grid"
                 title="Complete Task"
-                onClick={() => setShowCompleteConfirm(true)}
+                onClick={() => {
+                  if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                    toast.error('Please upload the required evidence before completing this checklist.')
+                    return
+                  }
+                  setShowCompleteConfirm(true)
+                }}
                 disabled={isCompleting}
               />
               </div>
@@ -549,7 +585,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
         </div>
       </div>
 
-      {/* ==== Evidence Card ==== */}
+      {/* ==== Evidence Card — only shown when proof/evidence is mandatory ==== */}
+      {isProofMandatory && (
       <div className="bg-card border border-border rounded-lg shadow-sm">
         <div className="px-6 py-4 border-b border-border flex items-center justify-between">
           <h2 className="text-base font-semibold text-foreground">
@@ -564,43 +601,50 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
           {/* Upload buttons — only when in_progress and not readOnly */}
           {effectiveStatus === 'in_progress' && !readOnly && (
             <div className="flex items-center gap-2">
-              {/* Camera input — only for images, uses rear camera on mobile */}
-              <input
-                ref={fileInputRef}
-                type="file"
-                capture="environment"
-                onChange={handleUploadEvidence}
-                className="hidden"
-                accept="image/*"
-              />
-              {/* File input — for documents (PDF, DOC, CSV, etc.) */}
-              <input
-                type="file"
-                onChange={handleUploadEvidence}
-                className="hidden"
-                id="document-upload"
-                accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-              />
-              <ActionButton
-                action="add"
-                layout="grid"
-                title="Camera"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={isUploading}
-              />
-              <label
-                htmlFor="document-upload"
-                className={`px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors flex items-center gap-2 ${
-                  isUploading
-                    ? 'opacity-50 cursor-not-allowed'
-                    : 'hover:bg-muted'
-                }`}
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                </svg>
-                Documents
-              </label>
+              {isPhotoUpload ? (
+                <>
+                  {/* Camera input — only for image uploads (PHOTO), uses rear camera on mobile */}
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    capture="environment"
+                    onChange={handleUploadEvidence}
+                    className="hidden"
+                    accept="image/*"
+                  />
+                  <ActionButton
+                    action="add"
+                    layout="grid"
+                    title="Camera"
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={isUploading}
+                  />
+                </>
+              ) : (
+                <>
+                  {/* File input — for documents (PDF / EXCEL), hidden, opened via the label below */}
+                  <input
+                    type="file"
+                    onChange={handleUploadEvidence}
+                    className="hidden"
+                    id="document-upload"
+                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                  />
+                  <label
+                    htmlFor="document-upload"
+                    className={`px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors flex items-center gap-2 ${
+                      isUploading
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:bg-muted'
+                    }`}
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    Documents
+                  </label>
+                </>
+              )}
             </div>
           )}
 
@@ -625,7 +669,11 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                 {isLocked ? 'No evidence files were uploaded.' : effectiveStatus === 'not_started' ? 'Start the task to upload evidence files.' : 'No evidence files uploaded yet.'}
               </p>
               {effectiveStatus === 'in_progress' && (
-                <p className="text-xs text-muted-foreground mt-1">Click "Add Files" to upload images, documents, or videos.</p>
+                <p className="text-xs text-muted-foreground mt-1">
+                  {isPhotoUpload
+                    ? 'Click "Camera" to capture a photo or pick an image from your device.'
+                    : `Click "Documents" to upload a ${uploadType.toLowerCase()} file.`}
+                </p>
               )}
             </div>
           ) : (
@@ -679,6 +727,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
           )}
         </div>
       </div>
+      )}
 
       {/* ==== Created / Updated info ==== */}
       <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-4">

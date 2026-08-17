@@ -83,3 +83,19 @@ export const TASK_STATUS_LABELS: Record<TaskExecutionStatus, string> = {
   SKIPPED: 'Skipped',
   OVERDUE: 'Overdue',
 }
+
+export const TASK_STATUS_BOARD_COLORS: Record<TaskExecutionStatus, string> = {
+  NOT_STARTED: 'border-gray-300 bg-gray-50',
+  IN_PROGRESS: 'border-blue-300 bg-blue-50',
+  COMPLETED: 'border-green-300 bg-green-50',
+  SKIPPED: 'border-yellow-300 bg-yellow-50',
+  OVERDUE: 'border-red-300 bg-red-50',
+}
+
+export const ALL_TASK_STATUSES: TaskExecutionStatus[] = [
+  'NOT_STARTED',
+  'IN_PROGRESS',
+  'COMPLETED',
+  'SKIPPED',
+  'OVERDUE',
+]

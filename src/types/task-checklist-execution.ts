@@ -28,6 +28,9 @@ export interface TaskChecklistExecution {
     endTime?: string
     sequence?: number
     isMandatory?: boolean
+    priority?: 'LOW' | 'MEDIUM' | 'HIGH' | 'CRITICAL'
+    proofMandatory?: boolean
+    uploadType?: 'PHOTO' | 'EXCEL' | 'PDF'
   }
 
   completedByUser?: {

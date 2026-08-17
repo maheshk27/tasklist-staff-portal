@@ -4,7 +4,7 @@ import { useAuth } from '../hooks/useAuth'
 import { onboardingService, taskService } from '../services/apiManager'
 import type { StoreWithMapping } from '../types/user-store'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
-import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
+import { TASK_STATUS_COLORS, TASK_STATUS_LABELS, TASK_STATUS_BOARD_COLORS, ALL_TASK_STATUSES } from '../types/task-execution'
 import { formatDate, formatTime } from '../utils/date'
 
 type TabType = 'today' | 'historical'
@@ -295,6 +295,33 @@ const MyTasks: React.FC = () => {
     )
   }
 
+  // Render status summary (counts per status)
+  const renderStatusSummary = (tasks: TaskExecution[]) => {
+    if (tasks.length === 0) return null
+    const statusCounts = ALL_TASK_STATUSES.reduce<Record<TaskExecutionStatus, number>>(
+      (acc, status) => {
+        acc[status] = tasks.filter((t) => t.executionStatus === status).length
+        return acc
+      },
+      {} as Record<TaskExecutionStatus, number>,
+    )
+    return (
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
+        {ALL_TASK_STATUSES.map((status) => (
+          <div
+            key={status}
+            className={`rounded-lg border p-3 text-center ${TASK_STATUS_BOARD_COLORS[status]}`}
+          >
+            <div className="text-2xl font-bold text-foreground">{statusCounts[status]}</div>
+            <div className="text-xs font-medium text-muted-foreground mt-0.5">
+              {TASK_STATUS_LABELS[status]}
+            </div>
+          </div>
+        ))}
+      </div>
+    )
+  }
+
   // Render tabs
   const renderTabs = () => {
     if (!selectedStoreId) return null
@@ -349,12 +376,15 @@ const MyTasks: React.FC = () => {
                   </span>
                 )}
               </div>
-              {renderTaskList(
-                todaysTasks,
-                isLoadingTodaysTasks,
-                todaysTasksError,
-                'No tasks scheduled for today at this store.',
-              )}
+              {renderStatusSummary(todaysTasks)}
+              <div className="mt-4">
+                {renderTaskList(
+                  todaysTasks,
+                  isLoadingTodaysTasks,
+                  todaysTasksError,
+                  'No tasks scheduled for today at this store.',
+                )}
+              </div>
             </div>
           ) : (
             <div>
@@ -387,12 +417,17 @@ const MyTasks: React.FC = () => {
               </div>
 
               {selectedDate ? (
-                renderTaskList(
-                  historicalTasks,
-                  isLoadingHistoricalTasks,
-                  historicalTasksError,
-                  'No tasks found for the selected date.',
-                )
+                <>
+                  {renderStatusSummary(historicalTasks)}
+                  <div className="mt-4">
+                    {renderTaskList(
+                      historicalTasks,
+                      isLoadingHistoricalTasks,
+                      historicalTasksError,
+                      'No tasks found for the selected date.',
+                    )}
+                  </div>
+                </>
               ) : (
                 <div className="text-center py-12">
                   <div className="text-4xl mb-4">📅</div>

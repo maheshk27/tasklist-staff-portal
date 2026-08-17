@@ -57,7 +57,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Filter menu items based on user role
   const filteredMenuItems = menuItems.filter(item => {
     if (item.title === 'Team Tasks') {
-      return user?.role?.roleName?.toUpperCase() === 'AREA MANAGER (AM)' || user?.role?.roleName?.toUpperCase() === 'BRANCH MANAGER (BM)'
+      return user?.role?.roleName?.toUpperCase() === 'AREA MANAGER (AM)' ||
+        user?.role?.roleName?.toUpperCase() === 'BRANCH MANAGER (BM)' ||
+        user?.role?.roleName?.toUpperCase() === 'GENERAL MANAGER OPERATIONS (GM)'
     }
     return true
   })
@@ -247,7 +249,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Overlay for mobile */}
         {isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-opacity-50 z-40 md:hidden"
+            className="fixed inset-0 bg-opacity-50 z-50 md:hidden"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
             onClick={() => setIsSidebarOpen(false)}
           />

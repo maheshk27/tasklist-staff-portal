@@ -42,7 +42,9 @@ const TeamTasks: React.FC = () => {
 
   // Check user role - only CLUSTER HEAD and BRANCH MANAGER can access
   useEffect(() => {
-    if (!user || (user.role?.roleName?.toUpperCase() !== 'AREA MANAGER (AM)' && user.role?.roleName?.toUpperCase() !== 'BRANCH MANAGER (BM)')) {
+    if (!user || (user.role?.roleName?.toUpperCase() !== 'AREA MANAGER (AM)'
+      && user.role?.roleName?.toUpperCase() !== 'BRANCH MANAGER (BM)')
+      && user.role?.roleName?.toUpperCase() !== 'GENERAL MANAGER OPERATIONS (GM)') {
       navigate('/dashboard')
     }
   }, [user, navigate])
@@ -444,8 +446,8 @@ const TeamTasks: React.FC = () => {
             <button
               onClick={() => setActiveTab('today')}
               className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'today'
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               <span className="flex items-center gap-2">
@@ -459,8 +461,8 @@ const TeamTasks: React.FC = () => {
             <button
               onClick={() => setActiveTab('historical')}
               className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'historical'
-                  ? 'text-primary'
-                  : 'text-muted-foreground hover:text-foreground'
+                ? 'text-primary'
+                : 'text-muted-foreground hover:text-foreground'
                 }`}
             >
               <span className="flex items-center gap-2">

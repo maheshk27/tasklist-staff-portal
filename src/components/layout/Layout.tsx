@@ -249,7 +249,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Overlay for mobile */}
         {isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-opacity-50 z-50 md:hidden"
+            className="fixed inset-0 bg-opacity-50 z-40 md:hidden"
             style={{ backgroundColor: 'rgba(0, 0, 0, 0.5)' }}
             onClick={() => setIsSidebarOpen(false)}
           />

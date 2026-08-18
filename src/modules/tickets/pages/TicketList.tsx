@@ -184,7 +184,7 @@ const TicketList: React.FC = () => {
       }
       if (searchQuery) {
         const q = searchQuery.toLowerCase()
-        const fields = [ticket.ticketNumber, ticket.title, ticket.description, ticket.store?.storeName, ticket.ticketCategory?.categoryName, ticket.assignedToUser?.userName].filter(Boolean)
+        const fields = [ticket.ticketNumber, ticket.ticketList?.ticketTitle, ticket.description, ticket.store?.storeName, ticket.ticketList?.ticketCategory?.categoryName, ticket.assignedToUser?.userName].filter(Boolean)
         return fields.some(f => f?.toLowerCase().includes(q))
       }
       return true
@@ -239,10 +239,10 @@ const TicketList: React.FC = () => {
             <span className="text-xs font-semibold text-primary truncate">{ticket.ticketNumber}</span>
             {breached && <span className="px-1 py-0.5 text-[10px] font-medium rounded bg-red-100 text-red-800 shrink-0">SLA</span>}
           </div>
-          <p className="text-sm font-medium text-foreground line-clamp-2 mb-2">{ticket.title}</p>
+          <p className="text-sm font-medium text-foreground line-clamp-2 mb-2">{ticket.ticketList?.ticketTitle}</p>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             {ticket.store && <span className="truncate">{ticket.store.storeName}</span>}
-            {ticket.priority && <span className="shrink-0 ml-2">{ticket.priority}</span>}
+            {ticket.ticketList?.ticketPriority?.name && <span className="shrink-0 ml-2">{ticket.ticketList.ticketPriority.name}</span>}
           </div>
           <div className="flex items-center justify-between mt-2 pt-2 border-t border-border text-xs text-muted-foreground">
             <span>{formatDateTime(ticket.createdAt)}</span>
@@ -274,7 +274,7 @@ const TicketList: React.FC = () => {
             </svg>
           </div>
         </div>
-        <h3 className="font-semibold text-foreground text-base mb-3">{ticket.title}</h3>
+        <h3 className="font-semibold text-foreground text-base mb-3">{ticket.ticketList?.ticketTitle}</h3>
         {/* {ticket.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{ticket.description}</p>} */}
         {ticket.store && (
           <div className="flex items-center gap-1.5 mb-2 text-sm">
@@ -283,22 +283,16 @@ const TicketList: React.FC = () => {
           </div>
         )}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
-          {ticket.ticketCategory && (
+          {ticket.ticketList?.ticketCategory && (
             <div className="flex items-center gap-1.5">
               <span className="text-muted-foreground text-xs">Category:</span>
-              <span className="font-medium text-foreground">{ticket.ticketCategory.categoryName}</span>
+              <span className="font-medium text-foreground">{ticket.ticketList.ticketCategory.categoryName}</span>
             </div>
           )}
-          {ticket.priority && (
+          {ticket.ticketList?.ticketPriority && (
             <div className="flex items-center gap-1.5 text-sm">
               <span className="text-muted-foreground text-xs">Priority:</span>
-              <span className="font-medium text-foreground">{ticket.priority}</span>
-            </div>
-          )}
-          {ticket.severity && (
-            <div className="flex items-center gap-1.5 text-sm">
-              <span className="text-muted-foreground text-xs">Severity:</span>
-              <span className="font-medium text-foreground">{ticket.severity}</span>
+              <span className="font-medium text-foreground">{ticket.ticketList.ticketPriority.name}</span>
             </div>
           )}
           <div className="flex items-center gap-1.5 text-sm">

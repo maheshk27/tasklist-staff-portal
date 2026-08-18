@@ -3,14 +3,9 @@ export interface TicketResponseDto {
   ticketNumber: string;
   storeId: number;
   store?: { storeId: number; storeName: string; storeCode: string };
-  departmentId: number;
-  department?: { departmentId: number; departmentName: string };
-  ticketCategoryId: number;
-  ticketCategory?: { ticketCategoryId: number; categoryName: string };
-  title: string;
+  ticketListId: number;
+  ticketList?: TicketListDto;
   description?: string;
-  priority?: string;
-  severity?: string;
   status: string;
   createdBy: number;
   createdByUser?: { userId: number; userName: string; firstName: string; lastName: string };
@@ -46,21 +41,15 @@ export interface TicketPriorityDto {
 
 export interface CreateTicketDto {
   storeId: number;
-  departmentId: number;
-  ticketCategoryId: number;
-  title: string;
+  ticketListId: number;
   description?: string;
-  priority?: string;
-  severity?: string;
   createdBy: number;
   assignedTo?: number;
 }
 
 export interface UpdateTicketDto {
-  title?: string;
+  ticketListId?: number;
   description?: string;
-  priority?: string;
-  severity?: string;
   status?: string;
   assignedTo?: number;
   resolutionNotes?: string;
@@ -79,6 +68,70 @@ export interface TicketFilterParams {
   assignedTo?: number;
   createdFrom?: string;
   createdTo?: string;
+}
+
+// =======================
+// Ticket List Management Types
+// =======================
+
+export interface TicketListDto {
+  ticketListId: number;
+  departmentId: number;
+  department?: { departmentId: number; departmentName: string };
+  ticketCategoryId: number;
+  ticketCategory?: { ticketCategoryId: number; categoryName: string };
+  ticketTitle: string;
+  regionalText?: string;
+  ticketPriorityId: number;
+  ticketPriority?: { id: number; name: string; slaHours?: number };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateTicketListDto {
+  departmentId: number;
+  ticketCategoryId: number;
+  ticketTitle: string;
+  regionalText?: string;
+  ticketPriorityId: number;
+}
+
+export interface UpdateTicketListDto {
+  departmentId?: number;
+  ticketCategoryId?: number;
+  ticketTitle?: string;
+  regionalText?: string;
+  ticketPriorityId?: number;
+}
+
+// =======================
+// Ticket Category Management Types
+// =======================
+
+export interface CreateTicketCategoryDto {
+  categoryName: string;
+  description?: string;
+  isActive: boolean;
+}
+
+export interface UpdateTicketCategoryDto {
+  categoryName?: string;
+  description?: string;
+  isActive?: boolean;
+}
+
+// =======================
+// Ticket Priority Management Types
+// =======================
+
+export interface CreateTicketPriorityDto {
+  name: string;
+  slaHours?: number;
+}
+
+export interface UpdateTicketPriorityDto {
+  name?: string;
+  slaHours?: number;
 }
 
 // =======================

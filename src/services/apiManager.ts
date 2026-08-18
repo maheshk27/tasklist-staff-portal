@@ -612,6 +612,7 @@ import type {
   TicketResponseDto, 
   TicketCategoryDto,
   TicketPriorityDto, 
+  TicketListDto,
   CreateTicketDto, 
   UpdateTicketDto, 
   TicketFilterParams,
@@ -722,6 +723,18 @@ export const ticketService = {
     }
   },
 
+/**
+   * Get all ticket lists (mapping of department, category, title and priority)
+   */
+  async getTicketLists(): Promise<ApiResponse<TicketListDto[]>> {
+    try {
+      const response = await taskApi.get<ApiResponse<TicketListDto[]>>('/ticket-lists')
+      return response.data
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch ticket lists'
+      throw new Error(errorMessage)
+    }
+  },
   // ==================== Ticket Status History APIs ====================
 
   /**

@@ -428,7 +428,7 @@ const TicketDetail: React.FC = () => {
         </div>
 
         <div className="space-y-4">
-          <h1 className="text-2xl font-bold">{ticket.title}</h1>
+          <h1 className="text-2xl font-bold">{ticket.ticketList?.ticketTitle}</h1>
           {ticket.description && (
             <p className="text-sm text-muted-foreground">{ticket.description}</p>
           )}
@@ -443,19 +443,15 @@ const TicketDetail: React.FC = () => {
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Department</h3>
-                <p className="text-sm">{ticket.department?.departmentName || 'N/A'}</p>
+                <p className="text-sm">{ticket.ticketList?.department?.departmentName || 'N/A'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Category</h3>
-                <p className="text-sm">{ticket.ticketCategory?.categoryName || 'N/A'}</p>
+                <p className="text-sm">{ticket.ticketList?.ticketCategory?.categoryName || 'N/A'}</p>
               </div>
               <div>
                 <h3 className="text-sm font-medium text-muted-foreground">Priority</h3>
-                <p className="text-sm">{ticket.priority || 'N/A'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-medium text-muted-foreground">Severity</h3>
-                <p className="text-sm">{ticket.severity || 'N/A'}</p>
+                <p className="text-sm">{ticket.ticketList?.ticketPriority?.name || 'N/A'}</p>
               </div>
             </div>
           </div>

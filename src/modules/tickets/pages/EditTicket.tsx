@@ -1,11 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { useAuth } from '../../../hooks/useAuth'
 import { ticketService } from '../../../services/apiManager'
-import type { TicketResponseDto, TicketPriorityDto } from '../../../types/ticket'
+import type { TicketResponseDto, TicketListDto } from '../../../types/ticket'
 import toast from 'react-hot-toast'
-
-const SEVERITY_OPTIONS = ['Minor', 'Major', 'Critical', 'Blocker']
 
 const EditTicket: React.FC = () => {
   const { id } = useParams<{ id: string }>()
@@ -15,17 +13,15 @@ const EditTicket: React.FC = () => {
   const [isLoading, setIsLoading] = useState(true)
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [ticket, setTicket] = useState<TicketResponseDto | null>(null)
-  const [priorities, setPriorities] = useState<TicketPriorityDto[]>([])
+  const [ticketLists, setTicketLists] = useState<TicketListDto[]>([])
 
   const [formData, setFormData] = useState({
-    title: '',
+    ticketListId: '' as string | number,
     description: '',
-    priority: '',
-    severity: '',
     resolutionNotes: '',
   })
 
-  // Fetch ticket data and priorities
+  // Fetch ticket data and ticket lists
   useEffect(() => {
     if (!id) return
     let cancelled = false
@@ -33,25 +29,24 @@ const EditTicket: React.FC = () => {
     const fetchData = async () => {
       setIsLoading(true)
       try {
-        const [ticketRes, prioritiesRes] = await Promise.all([
+        const [ticketRes, ticketListsRes] = await Promise.all([
           ticketService.getTicket(Number(id)),
-          ticketService.getTicketPriorities(),
+          ticketService.getTicketLists(),
         ])
         if (cancelled) return
 
         if (ticketRes.data) {
           setTicket(ticketRes.data)
-          setFormData({
-            title: ticketRes.data.title,
-            description: ticketRes.data.description || '',
-            priority: ticketRes.data.priority || '',
-            severity: ticketRes.data.severity || '',
-            resolutionNotes: ticketRes.data.resolutionNotes || '',
-          })
+          setFormData(prev => ({
+            ...prev,
+            ticketListId: ticketRes.data?.ticketListId || '',
+            description: ticketRes.data?.description || '',
+            resolutionNotes: ticketRes.data?.resolutionNotes || '',
+          }))
         }
 
-        if (prioritiesRes.data) {
-          setPriorities(prioritiesRes.data)
+        if (ticketListsRes.data) {
+          setTicketLists(ticketListsRes.data)
         }
       } catch {
         toast.error('Failed to load ticket')
@@ -63,30 +58,25 @@ const EditTicket: React.FC = () => {
     return () => { cancelled = true }
   }, [id])
 
+  // The selected ticket (locked in Edit) determines department + category
+  const selectedTicketList = useMemo(
+    () => ticketLists.find(list => list.ticketListId === Number(formData.ticketListId)) || ticket?.ticketList,
+    [ticketLists, formData.ticketListId, ticket]
+  )
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!id || !user) return
 
-    if (!formData.title.trim()) {
-      toast.error('Title is required')
-      return
-    }
-    if (!formData.priority) {
-      toast.error('Priority is required')
-      return
-    }
-    if (!formData.severity) {
-      toast.error('Severity is required')
+    if (!formData.ticketListId) {
+      toast.error('Ticket could not be resolved')
       return
     }
 
     setIsSubmitting(true)
     try {
       const response = await ticketService.updateTicket(Number(id), {
-        title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        priority: formData.priority,
-        severity: formData.severity,
         resolutionNotes: formData.resolutionNotes.trim() || undefined,
       })
 
@@ -103,7 +93,7 @@ const EditTicket: React.FC = () => {
     }
   }
 
-  const updateField = (field: string, value: string) => {
+  const updateField = (field: string, value: string | number) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -128,49 +118,85 @@ const EditTicket: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Edit Ticket</h1>
-        <p className="text-muted-foreground mt-2">
-          {ticket.ticketNumber} — {ticket.title}
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold">Edit Ticket</h1>
+          <p className="text-muted-foreground mt-2">
+            {ticket.ticketNumber} — {ticket.ticketList?.ticketTitle || 'N/A'}
+          </p>
+        </div>
+        <button
+          onClick={() => navigate(`/tickets/${id}`)}
+          className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium inline-flex items-center gap-2 shrink-0"
+        >
+          &larr; Back to Ticket
+        </button>
       </div>
 
       <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 shadow-sm space-y-5">
         {/* Ticket info (read-only) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-3 bg-muted/30 rounded-lg text-sm">
+        <div className="grid grid-cols-2 md:grid-cols-3 gap-4 p-3 bg-muted/30 rounded-lg text-sm">
           <div>
             <span className="text-muted-foreground">Store:</span>{' '}
             <span className="font-medium">{ticket.store?.storeName || 'N/A'}</span>
           </div>
           <div>
-            <span className="text-muted-foreground">Category:</span>{' '}
-            <span className="font-medium">{ticket.ticketCategory?.categoryName || 'N/A'}</span>
-          </div>
-          <div>
             <span className="text-muted-foreground">Status:</span>{' '}
             <span className="font-medium">{ticket.status}</span>
           </div>
-          {ticket.assignedToUser && (
-            <div>
-              <span className="text-muted-foreground">Assigned to:</span>{' '}
-              <span className="font-medium">{ticket.assignedToUser.firstName} {ticket.assignedToUser.lastName}</span>
-            </div>
-          )}
         </div>
 
-        {/* Title */}
+        {/* Ticket (locked - cannot be changed) */}
         <div>
           <label className="block text-sm font-medium mb-1">
-            Title <span className="text-destructive">*</span>
+            Ticket <span className="text-destructive">*</span>
           </label>
-          <input
-            type="text"
-            required
-            maxLength={200}
-            value={formData.title}
-            onChange={(e) => updateField('title', e.target.value)}
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
+          <select
+            disabled
+            value={formData.ticketListId}
+            className="w-full p-2 border border-border rounded-lg bg-muted/40 text-foreground text-sm opacity-70 cursor-not-allowed"
+          >
+            <option value="">Select Ticket</option>
+            {ticketLists.map(list => (
+              <option key={list.ticketListId} value={list.ticketListId}>
+                {list.ticketTitle}{list.regionalText ? ` (${list.regionalText})` : ''}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Department & Category (auto-set based on the ticket, non-editable) */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Department <span className="text-destructive">*</span>
+            </label>
+            <select
+              disabled
+              value={selectedTicketList?.departmentId || ''}
+              className="w-full p-2 border border-border rounded-lg bg-muted/40 text-foreground text-sm opacity-70 cursor-not-allowed"
+            >
+              <option value="">Select Department</option>
+              {selectedTicketList?.department && (
+                <option value={selectedTicketList.department.departmentId}>{selectedTicketList.department.departmentName}</option>
+              )}
+            </select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Category <span className="text-destructive">*</span>
+            </label>
+            <select
+              disabled
+              value={selectedTicketList?.ticketCategoryId || ''}
+              className="w-full p-2 border border-border rounded-lg bg-muted/40 text-foreground text-sm opacity-70 cursor-not-allowed"
+            >
+              <option value="">Select Category</option>
+              {selectedTicketList?.ticketCategory && (
+                <option value={selectedTicketList.ticketCategory.ticketCategoryId}>{selectedTicketList.ticketCategory.categoryName}</option>
+              )}
+            </select>
+          </div>
         </div>
 
         {/* Description */}
@@ -182,42 +208,6 @@ const EditTicket: React.FC = () => {
             onChange={(e) => updateField('description', e.target.value)}
             className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y"
           />
-        </div>
-
-        {/* Priority & Severity row */}
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Priority <span className="text-destructive">*</span>
-            </label>
-            <select
-              value={formData.priority}
-              required
-              onChange={(e) => updateField('priority', e.target.value)}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="">Select Priority</option>
-              {priorities.map(p => (
-                <option key={p.id} value={p.name}>{`${p.name} (SLA: ${p.slaHours} Hours)`}</option>
-              ))}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Severity <span className="text-destructive">*</span>
-            </label>
-            <select
-              value={formData.severity}
-              required
-              onChange={(e) => updateField('severity', e.target.value)}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="">Select Severity</option>
-              {SEVERITY_OPTIONS.map(s => (
-                <option key={s} value={s}>{s}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {/* Resolution Notes */}
@@ -255,7 +245,6 @@ const EditTicket: React.FC = () => {
               'Save Changes'
             )}
           </button>
-          
         </div>
       </form>
     </div>

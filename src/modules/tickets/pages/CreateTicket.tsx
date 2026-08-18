@@ -17,6 +17,8 @@ const CreateTicket: React.FC = () => {
 
   const [formData, setFormData] = useState({
     storeId: '' as string | number,
+    departmentId: '' as string | number,
+    ticketCategoryId: '' as string | number,
     ticketListId: '' as string | number,
     description: '',
   })
@@ -55,14 +57,60 @@ const CreateTicket: React.FC = () => {
     return () => { cancelled = true }
   }, [user])
 
-  // Selected ticket determines the department + category (shown non-editable)
-  const selectedTicketList = useMemo(
-    () => ticketLists.find(list => list.ticketListId === Number(formData.ticketListId)),
-    [ticketLists, formData.ticketListId]
+  // Department options are derived from ticket lists so every listed department has selectable tickets
+  const departments = useMemo(() => {
+    const map = new Map<number, { departmentId: number; departmentName: string }>()
+    ticketLists.forEach(list => {
+      if (list.department) map.set(list.department.departmentId, list.department)
+    })
+    return Array.from(map.values())
+  }, [ticketLists])
+
+  const selectedDepartmentId = Number(formData.departmentId)
+
+  // Category options depend on the selected department
+  const categories = useMemo(() => {
+    const map = new Map<number, { ticketCategoryId: number; categoryName: string }>()
+    ticketLists
+      .filter(list => list.departmentId === selectedDepartmentId)
+      .forEach(list => {
+        if (list.ticketCategory) map.set(list.ticketCategory.ticketCategoryId, list.ticketCategory)
+      })
+    return Array.from(map.values())
+  }, [ticketLists, selectedDepartmentId])
+
+  // Ticket options depend on the selected department + category
+  const filteredTicketLists = useMemo(
+    () => ticketLists.filter(list =>
+      list.departmentId === selectedDepartmentId &&
+      list.ticketCategoryId === Number(formData.ticketCategoryId)
+    ),
+    [ticketLists, selectedDepartmentId, formData.ticketCategoryId]
   )
 
   const handleStoreChange = (storeId: number) => {
     setFormData(prev => ({ ...prev, storeId }))
+  }
+
+  const handleDepartmentChange = (departmentId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      departmentId,
+      ticketCategoryId: '',
+      ticketListId: '',
+    }))
+  }
+
+  const handleCategoryChange = (ticketCategoryId: number) => {
+    setFormData(prev => ({
+      ...prev,
+      ticketCategoryId,
+      ticketListId: '',
+    }))
+  }
+
+  const handleTicketChange = (ticketListId: number) => {
+    setFormData(prev => ({ ...prev, ticketListId }))
   }
 
   const updateField = (field: string, value: string | number) => {
@@ -75,6 +123,14 @@ const CreateTicket: React.FC = () => {
 
     if (!formData.storeId) {
       toast.error('Please select a store')
+      return
+    }
+    if (!formData.departmentId) {
+      toast.error('Please select a department')
+      return
+    }
+    if (!formData.ticketCategoryId) {
+      toast.error('Please select a category')
       return
     }
     if (!formData.ticketListId) {
@@ -148,7 +204,50 @@ const CreateTicket: React.FC = () => {
             </select>
           </div>
 
-          {/* Ticket (user selects the ticket first) */}
+          {/* Department (drives the category dropdown) */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Department <span className="text-destructive">*</span>
+            </label>
+            <select
+              required
+              value={formData.departmentId}
+              onChange={(e) => handleDepartmentChange(Number(e.target.value))}
+              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+            >
+              <option value="">Select Department</option>
+              {departments.map(dept => (
+                <option key={dept.departmentId} value={dept.departmentId}>
+                  {dept.departmentName}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {/* Category (filtered by the selected department) */}
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Category <span className="text-destructive">*</span>
+            </label>
+            <select
+              required
+              value={formData.ticketCategoryId}
+              onChange={(e) => handleCategoryChange(Number(e.target.value))}
+              disabled={!formData.departmentId}
+              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
+            >
+              <option value="">Select Category</option>
+              {categories.map(cat => (
+                <option key={cat.ticketCategoryId} value={cat.ticketCategoryId}>
+                  {cat.categoryName}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          {/* Ticket (filtered by the selected department + category) */}
           <div>
             <label className="block text-sm font-medium mb-1">
               Ticket <span className="text-destructive">*</span>
@@ -156,49 +255,16 @@ const CreateTicket: React.FC = () => {
             <select
               required
               value={formData.ticketListId}
-              onChange={(e) => updateField('ticketListId', e.target.value)}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              onChange={(e) => handleTicketChange(Number(e.target.value))}
+              disabled={!formData.ticketCategoryId}
+              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
             >
               <option value="">Select Ticket</option>
-              {ticketLists.map(list => (
+              {filteredTicketLists.map(list => (
                 <option key={list.ticketListId} value={list.ticketListId}>
                   {list.ticketTitle}{list.regionalText ? ` (${list.regionalText})` : ''}
                 </option>
               ))}
-            </select>
-          </div>
-        </div>
-
-        {/* Department & Category (auto-set based on selected ticket, non-editable) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Department <span className="text-destructive">*</span>
-            </label>
-            <select
-              disabled
-              value={selectedTicketList?.departmentId || ''}
-              className="w-full p-2 border border-border rounded-lg bg-muted/40 text-foreground text-sm opacity-70 cursor-not-allowed"
-            >
-              <option value="">Select Department</option>
-              {selectedTicketList?.department && (
-                <option value={selectedTicketList.department.departmentId}>{selectedTicketList.department.departmentName}</option>
-              )}
-            </select>
-          </div>
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Category <span className="text-destructive">*</span>
-            </label>
-            <select
-              disabled
-              value={selectedTicketList?.ticketCategoryId || ''}
-              className="w-full p-2 border border-border rounded-lg bg-muted/40 text-foreground text-sm opacity-70 cursor-not-allowed"
-            >
-              <option value="">Select Category</option>
-              {selectedTicketList?.ticketCategory && (
-                <option value={selectedTicketList.ticketCategory.ticketCategoryId}>{selectedTicketList.ticketCategory.categoryName}</option>
-              )}
             </select>
           </div>
         </div>

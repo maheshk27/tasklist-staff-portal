@@ -146,26 +146,7 @@ const EditTicket: React.FC = () => {
           </div>
         </div>
 
-        {/* Ticket (locked - cannot be changed) */}
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Ticket <span className="text-destructive">*</span>
-          </label>
-          <select
-            disabled
-            value={formData.ticketListId}
-            className="w-full p-2 border border-border rounded-lg bg-muted/40 text-foreground text-sm opacity-70 cursor-not-allowed"
-          >
-            <option value="">Select Ticket</option>
-            {ticketLists.map(list => (
-              <option key={list.ticketListId} value={list.ticketListId}>
-                {list.ticketTitle}{list.regionalText ? ` (${list.regionalText})` : ''}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* Department & Category (auto-set based on the ticket, non-editable) */}
+        {/* Department -> Category -> Ticket cascade (read-only since the ticket cannot be changed) */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
             <label className="block text-sm font-medium mb-1">
@@ -197,6 +178,25 @@ const EditTicket: React.FC = () => {
               )}
             </select>
           </div>
+        </div>
+
+        {/* Ticket (locked - cannot be changed) */}
+        <div>
+          <label className="block text-sm font-medium mb-1">
+            Ticket <span className="text-destructive">*</span>
+          </label>
+          <select
+            disabled
+            value={formData.ticketListId}
+            className="w-full p-2 border border-border rounded-lg bg-muted/40 text-foreground text-sm opacity-70 cursor-not-allowed"
+          >
+            <option value="">Select Ticket</option>
+            {ticketLists.map(list => (
+              <option key={list.ticketListId} value={list.ticketListId}>
+                {list.ticketTitle}{list.regionalText ? ` (${list.regionalText})` : ''}
+              </option>
+            ))}
+          </select>
         </div>
 
         {/* Description */}

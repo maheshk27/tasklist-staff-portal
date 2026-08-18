@@ -1,6 +1,7 @@
 export interface SurveyWithStatus {
   surveyId: number
   surveyName: string
+  surveyDays?: string[]
   dailySurveyId?: number | null
   surveyStatus?: string | null
   totalItems?: number

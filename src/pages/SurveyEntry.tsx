@@ -23,6 +23,7 @@ const SurveyEntryPage: React.FC = () => {
     surveyDate?: string
     storeId?: number
     surveyName?: string
+    surveyDays?: string[]
   } | null>(null)
 
   // Local form data for each entry
@@ -61,6 +62,7 @@ const SurveyEntryPage: React.FC = () => {
             surveyDate: data.surveyDate,
             storeId: data.storeId,
             surveyName: data.surveyName,
+            surveyDays: data.surveyDays,
           })
 
           // Set entries from the same response
@@ -214,6 +216,18 @@ const SurveyEntryPage: React.FC = () => {
             Back to Surveys
           </button>
           <h1 className="text-3xl font-bold">{submissionDetails?.surveyName || 'Survey Entry Details'}</h1>
+          {submissionDetails?.surveyDays && submissionDetails.surveyDays.length > 0 && (
+            <div className="flex flex-wrap gap-1 mt-2">
+              {submissionDetails.surveyDays.map((day) => (
+                <span
+                  key={day}
+                  className="px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground"
+                >
+                  {day}
+                </span>
+              ))}
+            </div>
+          )}
         </div>
       </div>
 

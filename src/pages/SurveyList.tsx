@@ -255,7 +255,21 @@ const SurveyList: React.FC = () => {
             >
               <div className="flex-1">
                 <div className="flex items-start justify-between gap-2 mb-3">
-                  <h3 className="font-semibold text-foreground">{survey.surveyName}</h3>
+                  <div>
+                    <h3 className="font-semibold text-foreground">{survey.surveyName}</h3>
+                    {survey.surveyDays && survey.surveyDays.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {survey.surveyDays.map((day) => (
+                          <span
+                            key={day}
+                            className="px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground"
+                          >
+                            {day}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                   <span className={`shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${getStatusBadgeClass(survey.surveyStatus)}`}>
                     {getStatusLabel(survey.surveyStatus)}
                   </span>

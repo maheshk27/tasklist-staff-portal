@@ -19,6 +19,7 @@ import TaskExecutionDetail from './pages/TaskExecutionDetail'
 import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
 import SurveyList from './pages/SurveyList'
 import SurveyEntryPage from './pages/SurveyEntry'
+import LoginLogs from './pages/LoginLogs'
 
 function App() {
 
@@ -49,6 +50,11 @@ function App() {
         <Route path="/change-password" element={
           <ProtectedRoute>
             <Layout><ChangePassword /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/login-logs" element={
+          <ProtectedRoute>
+            <Layout><LoginLogs /></Layout>
           </ProtectedRoute>
         } />
         <Route path="/my-tasks" element={

@@ -85,7 +85,7 @@ const Login: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="text-center mb-8">
-          <img src="/rk-logo.png" alt="RK BAZAAR" className="h-18 w-auto mx-auto mb-4" />
+          <img src="/rk-logo.png" alt="RK Bazar" className="h-18 w-auto mx-auto mb-4" />
         </div>
 
         {/* Login Form */}

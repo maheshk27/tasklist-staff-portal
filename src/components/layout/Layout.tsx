@@ -1,7 +1,9 @@
-import { useState, useEffect } from 'react'
-import { Link, useLocation } from 'react-router-dom'
+import { useState, useEffect, useRef } from 'react'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useNotifications'
+import { notificationService } from '../../services/apiManager'
+import type { NotificationLog } from '../../types/notification'
 import PWAInstallPrompt from '../PWAInstallPrompt'
 
 interface LayoutProps {
@@ -17,10 +19,95 @@ interface MenuItem {
 
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation()
+  const navigate = useNavigate()
   const { user, logout } = useAuth()
   const { permission, messagingSupported, requestPermission } = useNotifications()
   const [isSidebarOpen, setIsSidebarOpen] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
+
+  // Notification bell / panel state
+  const [notifications, setNotifications] = useState<NotificationLog[]>([])
+  const [notificationsLoading, setNotificationsLoading] = useState(false)
+  const [notificationError, setNotificationError] = useState<string | null>(null)
+  const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
+  const bellButtonRef = useRef<HTMLButtonElement>(null)
+  const notificationPanelRef = useRef<HTMLDivElement>(null)
+
+  const unreadCount = notifications.filter(n => !n.isRead).length
+
+  useEffect(() => {
+    if (!user?.userId) return
+    fetchNotifications()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.userId])
+
+  const fetchNotifications = async () => {
+    if (!user?.userId) return
+    setNotificationsLoading(true)
+    setNotificationError(null)
+    try {
+      const data = await notificationService.getUserNotifications(user.userId, 1, 30)
+      setNotifications(data)
+    } catch (err) {
+      setNotificationError(err instanceof Error ? err.message : 'Failed to fetch notifications')
+    } finally {
+      setNotificationsLoading(false)
+    }
+  }
+
+  const handleMarkAsRead = async (notificationId: number) => {
+    try {
+      await notificationService.markNotificationAsRead(notificationId)
+      setNotifications(prev =>
+        prev.map(n =>
+          n.notificationId === notificationId ? { ...n, isRead: true } : n,
+        ),
+      )
+    } catch (err) {
+      setNotificationError(err instanceof Error ? err.message : 'Failed to mark notification as read')
+    }
+  }
+
+  /**
+   * Open a notification:
+   * - marks it as read
+   * - navigates to the screenPath (when the path is a valid/known route)
+   * - closes the panel
+   */
+  const handleOpenNotification = (notification: NotificationLog) => {
+    setIsNotificationPanelOpen(false)
+    if (!notification.isRead) {
+      handleMarkAsRead(notification.notificationId)
+    }
+    const screenPath = notification.screenPath
+    if (screenPath && screenPath.startsWith('/')) {
+      navigate(screenPath)
+    }
+  }
+
+  // Close notification panel on outside click / Escape
+  useEffect(() => {
+    if (!isNotificationPanelOpen) return
+    const handleClickOutside = (event: MouseEvent) => {
+      if (
+        notificationPanelRef.current &&
+        !notificationPanelRef.current.contains(event.target as Node) &&
+        bellButtonRef.current &&
+        !bellButtonRef.current.contains(event.target as Node)
+      ) {
+        setIsNotificationPanelOpen(false)
+      }
+    }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsNotificationPanelOpen(false)
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    document.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+      document.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [isNotificationPanelOpen])
 
   // Prompt for notification permission after login.
   // Shows the browser dialog every time this layout mounts if permission is still 'default'
@@ -50,6 +137,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         { title: 'Profile', icon: '🙍', path: '/profile' },
         { title: 'Settings', icon: '⚙️', path: '/settings' },
         { title: 'Change Password', icon: '🔒', path: '/change-password' },
+        { title: 'Login Logs', icon: '🕐', path: '/login-logs' },
       ]
     }
   ]
@@ -107,11 +195,126 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 12h16M4 18h16" />
               </svg>
             </button>
-            <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
+            <img src="/rk-logo.png" alt="RK Bazar" className="h-12 w-auto" />
           </div>
 
           {/* Right Section: User Profile & Logout */}
           <div className="flex items-center gap-4">
+            {/* Notification Bell */}
+            <div className="relative">
+              <button
+                ref={bellButtonRef}
+                onClick={() => {
+                  setIsNotificationPanelOpen(prev => !prev)
+                  if (!isNotificationPanelOpen) {
+                    fetchNotifications()
+                  }
+                }}
+                className="relative p-2 rounded-lg hover:bg-muted transition-colors"
+                title="Notifications"
+                aria-label="Notifications"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+                </svg>
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                    {unreadCount > 99 ? '99+' : unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {isNotificationPanelOpen && (
+                <div
+                  ref={notificationPanelRef}
+                  className="absolute right-0 top-full mt-2 w-80 md:w-96 bg-card border border-border rounded-lg shadow-lg z-50 overflow-hidden"
+                >
+                  <div className="p-3 border-b border-border flex items-center justify-between">
+                    <h3 className="text-sm font-semibold">Notifications</h3>
+                    <button
+                      onClick={() => setIsNotificationPanelOpen(false)}
+                      className="p-1 rounded-md hover:bg-muted text-muted-foreground"
+                      aria-label="Close notifications"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  </div>
+
+                  <div className="max-h-96 overflow-y-auto">
+                    {notificationsLoading ? (
+                      <div className="flex items-center justify-center py-10">
+                        <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary" />
+                      </div>
+                    ) : notificationError ? (
+                      <div className="p-4 text-sm text-destructive">{notificationError}</div>
+                    ) : notifications.length === 0 ? (
+                      <div className="text-center py-10">
+                        <div className="text-3xl mb-2">🔔</div>
+                        <p className="text-sm text-muted-foreground">No notifications</p>
+                      </div>
+                    ) : (
+                      notifications.map((notification) => (
+                        <div
+                          key={notification.notificationId}
+                          className={`p-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${notification.isRead ? 'opacity-60' : ''}`}
+                        >
+                          <div className="flex items-start justify-between gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleOpenNotification(notification)}
+                              className="min-w-0 flex-1 text-left"
+                              title={notification.screenPath ? `Open: ${notification.screenPath}` : 'Open notification'}
+                            >
+                              <p className="text-sm font-medium text-foreground truncate">
+                                {notification.title || 'Notification'}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">
+                                {notification.body || ''}
+                              </p>
+                              <p className="text-[10px] text-muted-foreground/60 mt-1">
+                                {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}
+                              </p>
+                            </button>
+                            <div className="shrink-0 flex flex-col items-end gap-1">
+                              <div className="flex items-center gap-1">
+                                <button
+                                  type="button"
+                                  onClick={() => handleOpenNotification(notification)}
+                                  className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                  title="View and open"
+                                >
+                                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                  </svg>
+                                  View
+                                </button>
+                                {!notification.isRead && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleMarkAsRead(notification.notificationId)}
+                                    className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
+                                    title="Mark as read"
+                                  >
+                                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Mark as read
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm">
                 {user?.firstName?.[0] || 'U'}
@@ -142,7 +345,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <nav className="p-4 flex flex-col h-full">
             {/* Logo at top - mobile only */}
             <div className="mb-6 pb-4 border-b border-border flex justify-center md:hidden">
-              <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
+              <img src="/rk-logo.png" alt="RK Bazar" className="h-12 w-auto" />
             </div>
 
             {/* Menu items */}

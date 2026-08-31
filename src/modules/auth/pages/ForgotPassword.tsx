@@ -28,7 +28,7 @@ const ForgotPassword: React.FC = () => {
               ← Back to Login
             </Link>
             <div className="flex-1 flex justify-center">
-              <img src="/rk-logo.png" alt="RK BAZAAR" className="h-12 w-auto" />
+              <img src="/rk-logo.png" alt="RK Bazar" className="h-12 w-auto" />
             </div>
           </div>
 
@@ -63,7 +63,7 @@ const ForgotPassword: React.FC = () => {
       <div className="w-full max-w-md">
         {/* Header */}
         <div className="flex justify-center items-center mb-8">
-            <img src="/rk-logo.png" alt="RK BAZAAR" className="h-18 w-auto" />
+            <img src="/rk-logo.png" alt="RK Bazar" className="h-18 w-auto" />
         </div>
 
         {/* Forgot Password Form */}

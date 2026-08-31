@@ -7,6 +7,8 @@ import { decodeToken, getStoredTokens } from '../utils/auth'
 import { compressImage } from '../utils/image-compression'
 import { onboardingApi, taskApi, notificationApi } from './api'
 import type { LoginRequest, AuthResponse, User } from '../types/auth'
+import type { LoginLog } from '../types/login-log'
+import type { NotificationLog, NotificationLogPage } from '../types/notification'
 import type { UserStoresResponseDto } from '../types/user-store'
 import type { TaskExecution } from '../types/task-execution'
 import type { TaskChecklistExecution, UpdateTaskChecklistExecutionDto, UpdateTaskExecutionDto } from '../types/task-checklist-execution'
@@ -171,6 +173,19 @@ export const onboardingService = {
       return response.data
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to change password'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get the last 10 login log entries for the currently authenticated user
+   */
+  async getMyLoginLogs(): Promise<LoginLog[]> {
+    try {
+      const response = await onboardingApi.get<ApiResponse<LoginLog[]>>('/users/login-logs/my')
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch my login logs'
       throw new Error(errorMessage)
     }
   },
@@ -603,6 +618,41 @@ export const notificationService = {
       const errorMessage = error instanceof Error ? error.message : 'Failed to register device'
       console.error('[notificationService] ❌ Failed to register device:', errorMessage)
       // Don't throw — token registration failure shouldn't break the app
+    }
+  },
+
+  /**
+   * Get notification logs for a specific user.
+   */
+  async getUserNotifications(
+    userId: number,
+    page: number = 1,
+    limit: number = 20,
+  ): Promise<NotificationLog[]> {
+    try {
+      const response = await notificationApi.get<NotificationLogPage>(
+        `/notifications/user/${userId}`,
+        { params: { page, limit } },
+      )
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch notifications'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Mark a notification as read.
+   */
+  async markNotificationAsRead(notificationId: number): Promise<boolean> {
+    try {
+      const response = await notificationApi.post<{ success: boolean; message: string }>(
+        `/notifications/mark-read/${notificationId}`,
+      )
+      return response.data?.success ?? false
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to mark notification as read'
+      throw new Error(errorMessage)
     }
   },
 }

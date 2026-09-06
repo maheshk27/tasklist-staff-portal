@@ -26,7 +26,7 @@ interface ChecklistExecutionDetailProps {
   readOnly?: boolean
 }
 
-type EffectiveStatus = 'not_started' | 'in_progress' | 'completed'
+//type checklistExecution?.checklistStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
 
 const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ readOnly = false }) => {
   const { taskExecutionId, checklistExecutionId } = useParams<{
@@ -105,17 +105,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
     fetchEvidence()
   }, [fetchEvidence])
 
-  // Compute effective status
-  const effectiveStatus: EffectiveStatus = !checklistExecution
-    ? 'not_started'
-    : checklistExecution.checklistStatus === 'COMPLETED'
-      ? 'completed'
-      : checklistExecution.startedAt
-        ? 'in_progress'
-        : 'not_started'
-
-  const isLocked = effectiveStatus === 'completed' || readOnly
-  const isReadOnly = effectiveStatus !== 'in_progress' || readOnly
+  const isLocked = checklistExecution?.checklistStatus === 'COMPLETED' || readOnly
+  const isReadOnly = checklistExecution?.checklistStatus !== 'IN_PROGRESS' || readOnly
 
   // Get current userId from token
   const getCurrentUserId = (): number | null => {
@@ -347,38 +338,41 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
             </div>
           )}
 
-          {/* Time range */}
-          {checklistExecution.fromTime && (
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                Scheduled Time
-              </label>
-              <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                <span>🕐</span>
-                <span>
-                  {formatDateTime(checklistExecution.fromTime)}
-                  {checklistExecution.toTime ? ` - ${formatTime(checklistExecution.toTime)}` : ''}
-                </span>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {/* Time range */}
+            {checklistExecution.fromTime && (
+              <div>
+                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
+                  Scheduled Time
+                </label>
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <span>🕐</span>
+                  <span>
+                    {formatDateTime(checklistExecution.fromTime)}
+                    {checklistExecution.toTime ? ` - ${formatTime(checklistExecution.toTime)}` : ''}
+                  </span>
+                </div>
               </div>
-            </div>
-          )}
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            )}
+            {/* Status */}
             <div>
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                 Status
               </label>
               <div className="flex items-center gap-2">
-                <div className={`w-2.5 h-2.5 rounded-full ${
-                  effectiveStatus === 'completed' ? 'bg-green-500' :
-                  effectiveStatus === 'in_progress' ? 'bg-blue-500' : 'bg-yellow-500'
-                }`} />
+                {/* <div className={`w-2.5 h-2.5 rounded-full ${checklistExecution?.checklistStatus === 'COMPLETED' ? 'bg-green-500' :
+                  checklistExecution?.checklistStatus === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-yellow-500'
+                  }`} />
                 <span className="text-sm font-medium text-foreground">
-                  {effectiveStatus === 'not_started' ? 'Not Started' :
-                   effectiveStatus === 'in_progress' ? 'In Progress' : 'Completed'}
+                  {checklistExecution?.checklistStatus === 'NOT_STARTED' ? 'Not Started' :
+                    checklistExecution?.checklistStatus === 'IN_PROGRESS' ? 'In Progress' : 'Completed'}
+                </span> */}
+                <span className="text-sm font-medium text-foreground">
+                  {checklistExecution?.checklistStatus}
                 </span>
               </div>
             </div>
+            {/* Parent Master Task */}
             <div>
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                 Mapped Task
@@ -402,87 +396,87 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
         <div className="p-6">
           {/* Action section — hidden when readOnly */}
           {!readOnly && (
-          <div className="mb-6 pb-6 border-b border-border">
-            {effectiveStatus === 'not_started' && (
-              <div className="text-center">
-                <div className="text-3xl mb-3">⏳</div>
-                {isTimeToStart(checklistExecution.fromTime) ? (
-                  <>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      This checklist is pending. Start it to begin working.
-                    </p>
-                    <ActionButton
-                      action="signin"
-                      layout="grid"
-                      title="Start Task"
-                      onClick={handleStartTask}
-                      disabled={isStarting}
-                    />
-                  </>
-                ) : (
-                  <>
-                    <p className="text-sm text-orange-500 font-medium mb-1">
-                      ⏰ Checklist starts at {formatTime(checklistExecution.fromTime)}
-                    </p>
+            <div className="mb-6 pb-6 border-b border-border">
+              {(checklistExecution?.checklistStatus === 'NOT_STARTED') && (
+                <div className="text-center">
+                  <div className="text-3xl mb-3">⏳</div>
+                  {isTimeToStart(checklistExecution.fromTime) ? (
+                    <>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        This checklist is {checklistExecution?.checklistStatus == 'NOT_STARTED' ? 'pending' : 'overdue'}. Start it to begin working.
+                      </p>
+                      <ActionButton
+                        action="signin"
+                        layout="grid"
+                        title="Start Task"
+                        onClick={handleStartTask}
+                        disabled={isStarting}
+                      />
+                    </>
+                  ) : (
+                    <>
+                      <p className="text-sm text-orange-500 font-medium mb-1">
+                        ⏰ Checklist starts at {formatTime(checklistExecution.fromTime)}
+                      </p>
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Please wait until the scheduled start time to begin.
+                      </p>
+                      <ActionButton
+                        action="signin"
+                        layout="grid"
+                        title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                        //onClick={handleStartTask}
+                        disabled={true}
+                      />
+                    </>
+                  )}
+                </div>
+              )}
+
+              {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && checklistExecution.startedAt && (
+                <div className="text-center">
+                  <div className="text-3xl mb-3">🔄</div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    Task is in {checklistExecution?.checklistStatus == 'IN_PROGRESS' ? 'progress' : 'overdue'}.
+                  </p>
+                  {checklistExecution.startedAt && (
                     <p className="text-xs text-muted-foreground mb-4">
-                      Please wait until the scheduled start time to begin.
+                      Started at: {formatDateTime(checklistExecution.startedAt)}
                     </p>
-                    <ActionButton
-                      action="signin"
-                      layout="grid"
-                      title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
-                      onClick={handleStartTask}
-                      disabled={true}
-                    />
-                  </>
-                )}
-              </div>
-            )}
+                  )}
+                  <ActionButton
+                    action="activate"
+                    layout="grid"
+                    title="Complete Task"
+                    onClick={() => {
+                      if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                        toast.error('Please upload the required evidence before completing this checklist.')
+                        return
+                      }
+                      setShowCompleteConfirm(true)
+                    }}
+                    disabled={isCompleting}
+                  />
+                </div>
+              )}
 
-            {effectiveStatus === 'in_progress' && (
-              <div className="text-center">
-                <div className="text-3xl mb-3">🔄</div>
-                <p className="text-sm text-muted-foreground mb-1">
-                  Task is in progress.
-                </p>
-                {checklistExecution.startedAt && (
-                  <p className="text-xs text-muted-foreground mb-4">
-                    Started at: { formatDateTime(checklistExecution.startedAt) }
-                  </p>
-                )}
-              <ActionButton
-                action="activate"
-                layout="grid"
-                title="Complete Task"
-                onClick={() => {
-                  if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
-                    toast.error('Please upload the required evidence before completing this checklist.')
-                    return
-                  }
-                  setShowCompleteConfirm(true)
-                }}
-                disabled={isCompleting}
-              />
-              </div>
-            )}
-
-            {effectiveStatus === 'completed' && (
-              <div className="text-center">
-                <div className="text-3xl mb-3">🎉</div>
-                <p className="text-sm text-green-600 font-medium">Checklist completed</p>
-                {checklistExecution.completedAt && (
-                  <p className="text-xs text-muted-foreground mt-1">
-                    Completed at: {formatDateTime(checklistExecution.completedAt)}
-                  </p>
-                )}
-                {checklistExecution.completedByUser && (
-                  <p className="text-xs text-muted-foreground">
-                    by {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
-                  </p>
-                )}
-              </div>
-            )}
-          </div>
+              {checklistExecution?.checklistStatus === 'COMPLETED' && (
+                <div className="text-center">
+                  <div className="text-3xl mb-3">🎉</div>
+                  <p className="text-sm text-green-600 font-medium">Checklist completed</p>
+                  {checklistExecution.completedAt && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Completed at: {formatDateTime(checklistExecution.completedAt)}
+                    </p>
+                  )}
+                  {checklistExecution.completedByUser && (
+                    <p className="text-xs text-muted-foreground">
+                      by {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
+                    </p>
+                  )}
+                </div>
+              )}
+            </div>
           )}
 
           {/* Timeline section */}
@@ -493,9 +487,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
               <div className="space-y-6 relative">
                 <div className="flex items-start gap-4">
                   <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${
-                      effectiveStatus === 'not_started' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
-                    }`} />
+                    <div className={`w-3 h-3 rounded-full ring-2 ${checklistExecution?.checklistStatus === 'NOT_STARTED' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
+                      }`} />
                   </div>
                   <div className="flex-1 pt-0">
                     <p className="text-sm font-medium text-foreground">Started</p>
@@ -510,9 +503,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${
-                      effectiveStatus === 'completed' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
-                    }`} />
+                    <div className={`w-3 h-3 rounded-full ring-2 ${checklistExecution?.checklistStatus === 'COMPLETED' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
+                      }`} />
                   </div>
                   <div className="flex-1 pt-0">
                     <p className="text-sm font-medium text-foreground">Completed</p>
@@ -559,12 +551,12 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
           <textarea
             value={notes}
             onChange={(e) => setNotes(e.target.value)}
-            placeholder={isLocked ? "Notes are locked after completion." : effectiveStatus === 'not_started' ? "Start the task first to add notes." : "Add notes for this checklist item..."}
+            placeholder={isLocked ? "Notes are locked after completion." : checklistExecution?.checklistStatus === 'NOT_STARTED' ? "Start the task first to add notes." : "Add notes for this checklist item..."}
             rows={3}
             disabled={isReadOnly}
             className="w-full p-3 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y disabled:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
           />
-          {effectiveStatus === 'in_progress' && !readOnly && (
+          {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
             <div className="flex justify-end mt-3">
               <button
                 onClick={handleSaveNotes}
@@ -587,146 +579,145 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
       {/* ==== Evidence Card — only shown when proof/evidence is mandatory ==== */}
       {isProofMandatory && (
-      <div className="bg-card border border-border rounded-lg shadow-sm">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">
-            Evidence Files
-            {evidenceList.length > 0 && (
-              <span className="ml-2 text-sm font-normal text-muted-foreground">
-                ({evidenceList.length})
-              </span>
-            )}
-          </h2>
+        <div className="bg-card border border-border rounded-lg shadow-sm">
+          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
+            <h2 className="text-base font-semibold text-foreground">
+              Evidence Files
+              {evidenceList.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({evidenceList.length})
+                </span>
+              )}
+            </h2>
 
-          {/* Upload buttons — only when in_progress and not readOnly */}
-          {effectiveStatus === 'in_progress' && !readOnly && (
-            <div className="flex items-center gap-2">
-              {isPhotoUpload ? (
-                <>
-                  {/* Camera input — only for image uploads (PHOTO), uses rear camera on mobile */}
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    capture="environment"
-                    onChange={handleUploadEvidence}
-                    className="hidden"
-                    accept="image/*"
-                  />
-                  <ActionButton
-                    action="add"
-                    layout="grid"
-                    title="Camera"
-                    onClick={() => fileInputRef.current?.click()}
-                    disabled={isUploading}
-                  />
-                </>
-              ) : (
-                <>
-                  {/* File input — for documents (PDF / EXCEL), hidden, opened via the label below */}
-                  <input
-                    type="file"
-                    onChange={handleUploadEvidence}
-                    className="hidden"
-                    id="document-upload"
-                    accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
-                  />
-                  <label
-                    htmlFor="document-upload"
-                    className={`px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors flex items-center gap-2 ${
-                      isUploading
+            {/* Upload buttons — only when in_progress and not readOnly */}
+            {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
+              <div className="flex items-center gap-2">
+                {isPhotoUpload ? (
+                  <>
+                    {/* Camera input — only for image uploads (PHOTO), uses rear camera on mobile */}
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      capture="environment"
+                      onChange={handleUploadEvidence}
+                      className="hidden"
+                      accept="image/*"
+                    />
+                    <ActionButton
+                      action="add"
+                      layout="grid"
+                      title="Camera"
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={isUploading}
+                    />
+                  </>
+                ) : (
+                  <>
+                    {/* File input — for documents (PDF / EXCEL), hidden, opened via the label below */}
+                    <input
+                      type="file"
+                      onChange={handleUploadEvidence}
+                      className="hidden"
+                      id="document-upload"
+                      accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt"
+                    />
+                    <label
+                      htmlFor="document-upload"
+                      className={`px-4 py-2 border border-border rounded-lg text-sm font-medium cursor-pointer transition-colors flex items-center gap-2 ${isUploading
                         ? 'opacity-50 cursor-not-allowed'
                         : 'hover:bg-muted'
-                    }`}
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                    </svg>
-                    Documents
-                  </label>
-                </>
-              )}
-            </div>
-          )}
+                        }`}
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                      </svg>
+                      Documents
+                    </label>
+                  </>
+                )}
+              </div>
+            )}
 
-          {readOnly ? (
-            <span className="text-xs text-muted-foreground">🔒 Read-only view</span>
-          ) : effectiveStatus !== 'in_progress' && (
-            <span className="text-xs text-muted-foreground">
-              {isLocked ? '🔒 Locked' : 'Start the task to upload files'}
-            </span>
-          )}
-        </div>
+            {readOnly ? (
+              <span className="text-xs text-muted-foreground">🔒 Read-only view</span>
+            ) : checklistExecution?.checklistStatus !== 'IN_PROGRESS' && (
+              <span className="text-xs text-muted-foreground">
+                {isLocked ? '🔒 Locked' : 'Start the task to upload files'}
+              </span>
+            )}
+          </div>
 
-        <div className="p-6">
-          {isLoadingEvidence ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
-            </div>
-          ) : evidenceList.length === 0 ? (
-            <div className="text-center py-8">
-              <div className="text-3xl mb-3">📎</div>
-              <p className="text-sm text-muted-foreground">
-                {isLocked ? 'No evidence files were uploaded.' : effectiveStatus === 'not_started' ? 'Start the task to upload evidence files.' : 'No evidence files uploaded yet.'}
-              </p>
-              {effectiveStatus === 'in_progress' && (
-                <p className="text-xs text-muted-foreground mt-1">
-                  {isPhotoUpload
-                    ? 'Click "Camera" to capture a photo or pick an image from your device.'
-                    : `Click "Documents" to upload a ${uploadType.toLowerCase()} file.`}
+          <div className="p-6">
+            {isLoadingEvidence ? (
+              <div className="flex items-center justify-center py-8">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+              </div>
+            ) : evidenceList.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-3xl mb-3">📎</div>
+                <p className="text-sm text-muted-foreground">
+                  {isLocked ? 'No evidence files were uploaded.' : checklistExecution?.checklistStatus === 'NOT_STARTED' ? 'Start the task to upload evidence files.' : 'No evidence files uploaded yet.'}
                 </p>
-              )}
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-              {evidenceList.map((evidence) => (
-                <div
-                  key={evidence.taskEvidenceId}
-                  className="group relative border border-border rounded-lg overflow-hidden bg-background hover:shadow-md transition-shadow"
-                >
-                  {isImageFile(evidence.mimeType) ? (
-                    <button
-                      onClick={() => {
-                        setPreviewImage(`${fileUploadBaseUrl}/${evidence.evidenceUrl}`)
-                      }}
-                      className="w-full aspect-square overflow-hidden bg-muted"
-                    >
-                      <img
-                        src={`${fileUploadBaseUrl}/${evidence.evidenceUrl}`}
-                        alt={evidence.fileName || 'Evidence'}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ) : (
-                    <div className="w-full aspect-square flex items-center justify-center bg-muted">
-                      <span className="text-3xl">{getEvidenceFileIcon(evidence.mimeType)}</span>
+                {checklistExecution?.checklistStatus === 'IN_PROGRESS' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    {isPhotoUpload
+                      ? 'Click "Camera" to capture a photo or pick an image from your device.'
+                      : `Click "Documents" to upload a ${uploadType.toLowerCase()} file.`}
+                  </p>
+                )}
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+                {evidenceList.map((evidence) => (
+                  <div
+                    key={evidence.taskEvidenceId}
+                    className="group relative border border-border rounded-lg overflow-hidden bg-background hover:shadow-md transition-shadow"
+                  >
+                    {isImageFile(evidence.mimeType) ? (
+                      <button
+                        onClick={() => {
+                          setPreviewImage(`${fileUploadBaseUrl}/${evidence.evidenceUrl}`)
+                        }}
+                        className="w-full aspect-square overflow-hidden bg-muted"
+                      >
+                        <img
+                          src={`${fileUploadBaseUrl}/${evidence.evidenceUrl}`}
+                          alt={evidence.fileName || 'Evidence'}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ) : (
+                      <div className="w-full aspect-square flex items-center justify-center bg-muted">
+                        <span className="text-3xl">{getEvidenceFileIcon(evidence.mimeType)}</span>
+                      </div>
+                    )}
+
+                    <div className="p-2">
+                      <p className="text-xs text-foreground truncate" title={evidence.fileName}>
+                        {evidence.fileName || 'Unnamed file'}
+                      </p>
+                      <p className="text-[10px] text-muted-foreground mt-0.5">
+                        {formatDateTime(evidence.createdAt)}
+                      </p>
                     </div>
-                  )}
 
-                  <div className="p-2">
-                    <p className="text-xs text-foreground truncate" title={evidence.fileName}>
-                      {evidence.fileName || 'Unnamed file'}
-                    </p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">
-                      {formatDateTime(evidence.createdAt)}
-                    </p>
+                    {/* Remove button — only when in_progress and not readOnly */}
+                    {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
+                      <button
+                        onClick={() => setDeleteConfirmId(evidence.taskEvidenceId)}
+                        className="absolute top-1 right-1 w-8 h-8 bg-destructive/80 text-destructive-foreground rounded-full flex items-center justify-center text-xs"
+                        title="Remove"
+                      >
+                        ✕
+                      </button>
+                    )}
                   </div>
-
-                  {/* Remove button — only when in_progress and not readOnly */}
-                  {effectiveStatus === 'in_progress' && !readOnly && (
-                    <button
-                      onClick={() => setDeleteConfirmId(evidence.taskEvidenceId)}
-                      className="absolute top-1 right-1 w-8 h-8 bg-destructive/80 text-destructive-foreground rounded-full flex items-center justify-center text-xs"
-                      title="Remove"
-                    >
-                      ✕
-                    </button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                ))}
+              </div>
+            )}
+          </div>
         </div>
-      </div>
       )}
 
       {/* ==== Created / Updated info ==== */}

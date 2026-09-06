@@ -25,8 +25,6 @@ interface TaskExecutionDetailProps {
   readOnly?: boolean
 }
 
-type EffectiveStatus = 'not_started' | 'in_progress' | 'completed'
-
 const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = false }) => {
   const { taskExecutionId } = useParams<{ taskExecutionId: string }>()
   const navigate = useNavigate()
@@ -110,15 +108,6 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
     fetchChecklists()
     return () => { cancelled = true }
   }, [taskExecutionId])
-
-  // Compute effective status
-  const effectiveStatus: EffectiveStatus = !taskExecution
-    ? 'not_started'
-    : taskExecution.executionStatus === 'COMPLETED'
-      ? 'completed'
-      : taskExecution.startedAt
-        ? 'in_progress'
-        : 'not_started'
 
   // Get current userId from token
   const getCurrentUserId = (): number | null => {
@@ -276,7 +265,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
           {/* Action section — hide when there are checklist items or readOnly */}
           {!readOnly && (!checklistExecutions || checklistExecutions.length === 0) && (
             <div className="mb-6 pb-6 border-b border-border">
-              {effectiveStatus === 'not_started' && (
+              {taskExecution.executionStatus === 'NOT_STARTED' && (
                 <div className="text-center">
                   <div className="text-3xl mb-3">⏳</div>
                   {isTimeToStart(taskExecution.fromTime) ? (
@@ -304,7 +293,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                         action="signin"
                         layout="grid"
                         title={`Starts at ${formatTime(taskExecution.fromTime)}`}
-                        onClick={handleStartTask}
+                        //onClick={handleStartTask}
                         disabled={true}
                       />
                     </>
@@ -312,29 +301,30 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                 </div>
               )}
 
-              {effectiveStatus === 'in_progress' && (
-                <div className="text-center">
-                  <div className="text-3xl mb-3">🔄</div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Task is in progress.
-                  </p>
-                  {taskExecution.startedAt && (
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Started at: {
-                        formatDateTime(taskExecution.startedAt)}
+              {(taskExecution.executionStatus === 'IN_PROGRESS' ||
+                taskExecution.executionStatus === 'OVERDUE' ) && (
+                  <div className="text-center">
+                    <div className="text-3xl mb-3">🔄</div>
+                    <p className="text-sm text-muted-foreground mb-1">
+                      Task is in progress.
                     </p>
-                  )}
-                  <ActionButton
-                    action="activate"
-                    layout="grid"
-                    title="Complete Task"
-                    onClick={() => setShowCompleteConfirm(true)}
-                    disabled={isCompleting}
-                  />
-                </div>
-              )}
+                    {taskExecution.startedAt && (
+                      <p className="text-xs text-muted-foreground mb-4">
+                        Started at: {
+                          formatDateTime(taskExecution.startedAt)}
+                      </p>
+                    )}
+                    <ActionButton
+                      action="activate"
+                      layout="grid"
+                      title="Complete Task"
+                      onClick={() => setShowCompleteConfirm(true)}
+                      disabled={isCompleting}
+                    />
+                  </div>
+                )}
 
-              {effectiveStatus === 'completed' && (
+              {taskExecution.executionStatus === 'COMPLETED' && (
                 <div className="text-center">
                   <div className="text-3xl mb-3">🎉</div>
                   <p className="text-sm text-green-600 font-medium">Task completed</p>
@@ -361,7 +351,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
               <div className="space-y-6 relative">
                 <div className="flex items-start gap-4">
                   <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${effectiveStatus === 'not_started' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
+                    <div className={`w-3 h-3 rounded-full ring-2 ${taskExecution.executionStatus === 'NOT_STARTED' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
                       }`} />
                   </div>
                   <div className="flex-1 pt-0">
@@ -377,7 +367,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                 </div>
                 <div className="flex items-start gap-4">
                   <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${effectiveStatus === 'completed' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
+                    <div className={`w-3 h-3 rounded-full ring-2 ${taskExecution.executionStatus === 'COMPLETED' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
                       }`} />
                   </div>
                   <div className="flex-1 pt-0">
@@ -447,9 +437,8 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                   <button
                     key={s}
                     onClick={() => setChecklistStatusFilter(checklistStatusFilter === s ? null : s)}
-                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${CHECKLIST_STATUS_COLORS[s]} ${
-                      checklistStatusFilter === s ? 'ring-2 ring-primary' : 'hover:opacity-80'
-                    }`}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${CHECKLIST_STATUS_COLORS[s]} ${checklistStatusFilter === s ? 'ring-2 ring-primary' : 'hover:opacity-80'
+                      }`}
                   >
                     {CHECKLIST_STATUS_LABELS[s]}
                     <span className="font-bold">{count}</span>

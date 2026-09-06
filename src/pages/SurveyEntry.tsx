@@ -235,7 +235,7 @@ const SurveyEntryPage: React.FC = () => {
       {submissionDetails && (
         <div className="bg-card border border-border rounded-lg p-5 shadow-sm">
           <h2 className="text-lg font-semibold mb-4">Submission Summary</h2>
-          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
             {/* Total Items */}
             <div className="bg-background rounded-lg p-4 border border-border">
               <p className="text-xs text-muted-foreground uppercase tracking-wide">Total Items</p>

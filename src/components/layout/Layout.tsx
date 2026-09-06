@@ -277,6 +277,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 {notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}
                               </p>
                             </button>
+                          </div>
+
                             <div className="shrink-0 flex flex-col items-end gap-1">
                               <div className="flex items-center gap-1">
                                 <button
@@ -306,7 +308,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                                 )}
                               </div>
                             </div>
-                          </div>
                         </div>
                       ))
                     )}

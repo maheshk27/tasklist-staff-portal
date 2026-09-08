@@ -5,6 +5,7 @@ import { onboardingService, taskService } from '../services/apiManager'
 import type { StoreWithMapping } from '../types/user-store'
 import type { SurveyWithStatus } from '../types/daily-survey'
 import toast from 'react-hot-toast'
+import PageHeader from '../components/PageHeader'
 
 const SurveyList: React.FC = () => {
   const { user } = useAuth()
@@ -201,10 +202,10 @@ const SurveyList: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Daily Survey</h1>
-        <p className="text-muted-foreground mt-2">Select store and date to view surveys</p>
-      </div>
+      <PageHeader
+        title="Daily Survey"
+        subtitle="Select store and date to view surveys"
+      />
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-lg p-4 shadow-sm">

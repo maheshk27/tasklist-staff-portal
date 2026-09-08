@@ -6,6 +6,7 @@ import type { TicketResponseDto, TicketCategoryDto, TicketFilterParams } from '.
 import type { StoreWithMapping } from '../../../types/user-store'
 import { formatDateTime } from '../../../utils/date'
 import { Search, ChevronDown } from 'lucide-react'
+import PageHeader from '../../../components/PageHeader'
 
 // ── Status constants ────────────────────────────────────────────────────────
 
@@ -318,25 +319,28 @@ const TicketList: React.FC = () => {
   // ── Tab bar ───────────────────────────────────────────────────────────────
 
   const renderTabs = () => (
-    <div className="flex items-center justify-between flex-wrap gap-4">
-      <h1 className="text-3xl font-bold">Tickets</h1>
-      <div className="flex items-center gap-4 flex-wrap">
-        <div className="flex bg-muted rounded-lg p-1">
-          <button
-            onClick={() => setActiveTab('raised')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'raised' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Raised By Me
-          </button>
-          <button
-            onClick={() => setActiveTab('assigned')}
-            className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'assigned' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
-          >
-            Assigned To Me
-          </button>
+    <PageHeader
+      title="Tickets"
+      subtitle="Manage and track tickets"
+      actions={
+        <div className="flex items-center gap-4 flex-wrap">
+          <div className="flex bg-muted rounded-lg p-1">
+            <button
+              onClick={() => setActiveTab('raised')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'raised' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Raised By Me
+            </button>
+            <button
+              onClick={() => setActiveTab('assigned')}
+              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'assigned' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+            >
+              Assigned To Me
+            </button>
+          </div>
         </div>
-      </div>
-    </div>
+      }
+    />
   )
 
   // ── Filters ───────────────────────────────────────────────────────────────

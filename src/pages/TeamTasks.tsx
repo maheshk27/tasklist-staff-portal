@@ -7,6 +7,7 @@ import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS, TASK_STATUS_BOARD_COLORS, ALL_TASK_STATUSES } from '../types/task-execution'
 import type { StoreUserItem } from '../services/apiManager'
 import { formatDateTime, formatTime } from '../utils/date'
+import PageHeader from '../components/PageHeader'
 
 type TabType = 'today' | 'historical'
 
@@ -573,10 +574,10 @@ const TeamTasks: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Team Tasks</h1>
-        <p className="text-muted-foreground mt-2">View tasks across your team</p>
-      </div>
+      <PageHeader
+        title="Team Tasks"
+        subtitle="View tasks across your team"
+      />
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>{renderStoreSelector()}</div>
         {selectedStoreId && (

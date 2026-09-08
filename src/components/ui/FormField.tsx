@@ -11,6 +11,7 @@ interface FormFieldProps {
   required?: boolean
   disabled?: boolean
   showPasswordToggle?: boolean
+  icon?: React.ReactNode
 }
 
 const FormField: React.FC<FormFieldProps> = ({
@@ -23,7 +24,8 @@ const FormField: React.FC<FormFieldProps> = ({
   error,
   required = false,
   disabled = false,
-  showPasswordToggle = false
+  showPasswordToggle = false,
+  icon
 }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
@@ -48,13 +50,18 @@ const FormField: React.FC<FormFieldProps> = ({
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <div className="relative">
+        {icon && (
+          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">
+            {icon}
+          </div>
+        )}
         <input
           type={getInputType()}
           id={name}
           name={name}
           value={value}
           onChange={onChange}
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
+          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${icon ? 'pl-10' : ''} ${
             error ? 'border-red-500' : 'border-border'
           } ${shouldShowPasswordToggle ? 'pr-10' : ''}`}
           placeholder={placeholder}

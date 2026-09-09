@@ -5,7 +5,7 @@ import { onboardingService, ticketService } from '../../../services/apiManager'
 import type { TicketResponseDto, TicketCategoryDto, TicketFilterParams } from '../../../types/ticket'
 import type { StoreWithMapping } from '../../../types/user-store'
 import { formatDateTime } from '../../../utils/date'
-import { Search, ChevronDown, LayoutGrid, SquareKanban } from 'lucide-react'
+import { Search, LayoutGrid, SquareKanban } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader'
 import FilterSection from '../../../components/FilterSection'
 import FormSelect from '../../../components/ui/FormSelect'
@@ -223,8 +223,8 @@ const TicketList: React.FC = () => {
           className="w-full text-left p-3 bg-card bg-background rounded-lg border border-border hover:shadow-md transition-shadow hover:border-primary/30"
         >
           <div className="flex items-center justify-between gap-2 mb-1">
-            <span className="text-xs font-semibold text-primary truncate">{ticket.ticketNumber}</span>
-            {breached && <span className="px-1 py-0.5 text-[10px] font-medium rounded bg-red-100 text-red-800 shrink-0">SLA</span>}
+            <span className="text-xs font-medium text-primary truncate">{ticket.ticketNumber}</span>
+            {breached && <span className="px-1 py-0.5 text-[10px] rounded bg-red-100 text-red-800 shrink-0">SLA</span>}
           </div>
           <p className="text-sm font-medium text-foreground line-clamp-2 mb-2">{ticket.ticketList?.ticketTitle}</p>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
@@ -245,58 +245,56 @@ const TicketList: React.FC = () => {
         onClick={() => navigate(`/tickets/${ticket.ticketId}`)}
         className="w-full text-left border border-border rounded-lg bg-background p-4 hover:shadow-md transition-shadow hover:border-primary/30 group"
       >
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-sm font-semibold text-primary">{ticket.ticketNumber}</span>
-              {breached && <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-red-100 text-red-800 ml-2 hidden md:inline">SLA Breached</span>}
+        <div className="space-y-1">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex-1 min-w-0">
+              <span className="text-sm font-medium text-primary">{ticket.ticketNumber}</span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(ticket.status)}`}>
+                {getStatusLabel(ticket.status)}
+              </span>
+              <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+              </svg>
             </div>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getStatusColor(ticket.status)}`}>
-              {getStatusLabel(ticket.status)}
-            </span>
-            <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </div>
-        <h3 className="font-semibold text-foreground text-base mb-3">{ticket.ticketList?.ticketTitle}</h3>
-        {/* {ticket.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{ticket.description}</p>} */}
-        {ticket.store && (
-          <div className="flex items-center gap-1.5 mb-2 text-sm">
-            <span className="text-muted-foreground text-xs">Store:</span>
-            <span className="font-medium text-foreground">{ticket.store.storeName}</span>
-          </div>
-        )}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+          <div className="font-medium text-foreground text-sm">{ticket.ticketList?.ticketTitle}</div>
+          {/* {ticket.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{ticket.description}</p>} */}
+          {ticket.store && (
+            <div className="flex items-center gap-1.5 text-sm">
+              <span className="text-muted-foreground text-xs">Store:</span>
+              <span className="text-foreground">{ticket.store.storeName}</span>
+            </div>
+          )}
           {ticket.ticketList?.ticketCategory && (
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-1.5 text-sm">
               <span className="text-muted-foreground text-xs">Category:</span>
-              <span className="font-medium text-foreground">{ticket.ticketList.ticketCategory.categoryName}</span>
+              <span className="text-foreground">{ticket.ticketList.ticketCategory.categoryName}</span>
             </div>
           )}
           {ticket.ticketList?.ticketPriority && (
             <div className="flex items-center gap-1.5 text-sm">
               <span className="text-muted-foreground text-xs">Priority:</span>
-              <span className="font-medium text-foreground">{ticket.ticketList.ticketPriority.name}</span>
+              <span className="text-foreground">{ticket.ticketList.ticketPriority.name}</span>
             </div>
           )}
           <div className="flex items-center gap-1.5 text-sm">
             <span className="text-muted-foreground text-xs">Raised On:</span>
-            <span className="font-medium text-foreground">{formatDateTime(ticket.createdAt)}</span>
+            <span className="text-foreground">{formatDateTime(ticket.createdAt)}</span>
           </div>
           {ticket.assignedToUser && (
             <div className="flex items-center gap-1.5 text-sm">
               <span className="text-muted-foreground text-xs">Assigned To:</span>
-              <span className="font-medium text-foreground">{getUserDisplayName(ticket.assignedToUser)}</span>
+              <span className="text-foreground">{getUserDisplayName(ticket.assignedToUser)}</span>
             </div>
           )}
           {breached && (
-            <div className="flex items-center gap-1.5 text-sm md:hidden">
+            <div className="flex items-center gap-1.5 text-sm">
               <span className="px-1.5 py-0.5 text-xs font-medium rounded bg-red-100 text-red-800">SLA Breached</span>
             </div>
           )}
+
         </div>
       </button>
     )
@@ -313,13 +311,13 @@ const TicketList: React.FC = () => {
           <div className="flex bg-muted rounded-lg p-1">
             <button
               onClick={() => setActiveTab('raised')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'raised' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'raised' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Raised By Me
             </button>
             <button
               onClick={() => setActiveTab('assigned')}
-              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'assigned' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors whitespace-nowrap ${activeTab === 'assigned' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Assigned To Me
             </button>
@@ -423,14 +421,14 @@ const TicketList: React.FC = () => {
   // ── Toolbar (search, status filter, new ticket button) ────────────────────
 
   const renderToolbar = () => (
-    <div className="flex items-center gap-4 flex-wrap">
+    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
       <div className="flex items-center gap-2">
-        <span className="text-sm text-muted-foreground">Filter:</span>
-        <div className="relative">
+        <span className="text-sm text-muted-foreground whitespace-nowrap">Filter:</span>
+        <div className="relative flex-1 sm:flex-none">
           <select
             value={statusFilter}
             onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
-            className="appearance-none pl-3 pr-8 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer"
+            className="appearance-none pl-3 pr-8 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary cursor-pointer w-full sm:w-auto"
           >
             <option value="all">All Status</option>
             <option value="open">Open</option>
@@ -441,23 +439,22 @@ const TicketList: React.FC = () => {
             <option value="closed">Closed</option>
             <option value="reopened">Reopened</option>
           </select>
-          <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground pointer-events-none" />
         </div>
       </div>
-      <div className="relative">
+      <div className="relative flex-1 sm:flex-none">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
         <input
           type="text"
           placeholder="Search tickets..."
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-9 pr-4 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-48"
+          className="pl-9 pr-4 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary w-full sm:w-48"
         />
       </div>
       {activeTab === 'raised' && (
         <button
           onClick={() => navigate('/tickets/create')}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm"
+          className="px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm whitespace-nowrap"
         >
           + New Ticket
         </button>
@@ -512,7 +509,7 @@ const TicketList: React.FC = () => {
   // ── Card layout ───────────────────────────────────────────────────────────
 
   const renderCardLayout = () => (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <div className="grid grid-cols-1 md:grid-cols-3 2xl:grid-cols-4 gap-4">
       {filteredTickets.map(t => renderTicketCard(t, false))}
     </div>
   )
@@ -564,12 +561,12 @@ const TicketList: React.FC = () => {
 
       {/* Ticket list / board */}
       <div className="bg-card border border-border rounded-lg shadow-sm">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">
-            {layout === 'card' ? 'Ticket List' : 'Ticket Board'}
-            {filteredTickets.length > 0 && <span className="ml-2 text-sm font-normal text-muted-foreground">({filteredTickets.length})</span>}
-          </h2>
-          <div className="flex items-center gap-4">
+        <div className="px-4 sm:px-6 py-4 border-b border-border">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <h2 className="text-base font-semibold text-foreground whitespace-nowrap">
+              {layout === 'card' ? 'Ticket List' : 'Ticket Board'}
+              {filteredTickets.length > 0 && <span className="ml-2 text-sm font-normal text-muted-foreground">({filteredTickets.length})</span>}
+            </h2>
             {renderToolbar()}
           </div>
         </div>

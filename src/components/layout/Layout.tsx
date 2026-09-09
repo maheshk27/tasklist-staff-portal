@@ -133,10 +133,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const menuItems: MenuItem[] = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
-    { title: 'Tickets', icon: Ticket, path: '/tickets' },
     { title: 'My Tasks', icon: CheckSquare, path: '/my-tasks' },
     { title: 'Team Tasks', icon: CheckSquare, path: '/team-tasks' },
     { title: 'Daily Survey', icon: FileText, path: '/survey' },
+    { title: 'Tickets', icon: Ticket, path: '/tickets' },
     {
       title: 'My Account',
       icon: User,

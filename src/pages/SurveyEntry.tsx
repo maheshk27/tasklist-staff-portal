@@ -4,6 +4,8 @@ import { taskService } from '../services/apiManager'
 import type { SurveyEntry } from '../types/daily-survey'
 import toast from 'react-hot-toast'
 import { formatDateTime } from '../utils/date'
+import PageHeader from '../components/PageHeader'
+import { ArrowLeft } from 'lucide-react'
 
 const SurveyEntryPage: React.FC = () => {
   const { dailySurveyId } = useParams<{ dailySurveyId: string }>()
@@ -203,33 +205,17 @@ const SurveyEntryPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <button
-            onClick={() => navigate('/survey')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-2 flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Surveys
-          </button>
-          <h1 className="text-3xl font-bold">{submissionDetails?.surveyName || 'Survey Entry Details'}</h1>
-          {submissionDetails?.surveyDays && submissionDetails.surveyDays.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {submissionDetails.surveyDays.map((day) => (
-                <span
-                  key={day}
-                  className="px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground"
-                >
-                  {day}
-                </span>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
+      <button
+        onClick={() => navigate('/survey')}
+        className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Survey
+      </button>
+      <PageHeader
+        title={submissionDetails?.surveyName || 'Survey Entry Details'}
+        subtitle=""
+      />
 
       {/* Submission Summary Card */}
       {submissionDetails && (
@@ -261,13 +247,13 @@ const SurveyEntryPage: React.FC = () => {
             </div>
 
             {/* Skipped */}
-           {/*  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+            {/*  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
               <p className="text-xs text-red-700 uppercase tracking-wide">Skipped</p>
               <p className="text-2xl font-bold mt-1 text-red-800">{skippedCount}</p>
             </div> */}
 
-              {/* Rack Clean */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            {/* Rack Clean */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <p className="text-xs text-blue-700 uppercase tracking-wide">Rack Clean</p>
               <p className="text-2xl font-bold mt-1 text-blue-800">{rackCleanCount}</p>
             </div>
@@ -299,7 +285,14 @@ const SurveyEntryPage: React.FC = () => {
 
           {/* Submission Metadata */}
           {(submissionDetails.submittedBy || submissionDetails.verifiedBy || submissionDetails.surveyDate) && (
-            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+              {submissionDetails?.surveyDays && submissionDetails.surveyDays.length > 0 && (
+                <div>
+                  <span className="text-muted-foreground">Survey Days:</span>
+                  <span className="ml-1 font-medium">{submissionDetails.surveyDays.join(", ")}</span>
+                </div>
+                
+              )}
               {submissionDetails.surveyDate && (
                 <div>
                   <span className="text-muted-foreground">Survey Date:</span>
@@ -351,9 +344,9 @@ const SurveyEntryPage: React.FC = () => {
                       {/* <span className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center text-xs font-semibold text-primary">
                         {index + 1}
                       </span> */}
-                      <h3 className="text-foreground">
+                      <div className="text-md text-foreground font-medium">
                         {(entry as any).surveyItemName || `Item #${entry.surveyItemId}`}
-                      </h3>
+                      </div>
                     </div>
                   </div>
                   {getStatusBadge(entry.entryStatus)}
@@ -380,7 +373,7 @@ const SurveyEntryPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Rack Clean</label>
                     <div className="flex gap-3">
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isRackClean ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${data.isRackClean ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
                         }`}>
                         <input
                           type="radio"
@@ -394,7 +387,7 @@ const SurveyEntryPage: React.FC = () => {
                         </svg>
                         <span className="text-sm font-medium">Yes</span>
                       </label>
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isRackClean === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${data.isRackClean === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
                         }`}>
                         <input
                           type="radio"
@@ -415,7 +408,7 @@ const SurveyEntryPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Board Available</label>
                     <div className="flex gap-3">
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
                         }`}>
                         <input
                           type="radio"
@@ -429,7 +422,7 @@ const SurveyEntryPage: React.FC = () => {
                         </svg>
                         <span className="text-sm font-medium">Yes</span>
                       </label>
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
                         }`}>
                         <input
                           type="radio"
@@ -461,7 +454,7 @@ const SurveyEntryPage: React.FC = () => {
                             onChange={() => handleInputChange(entry.surveyEntryId, 'entryStatus', status)}
                             className="sr-only"
                           />
-                          <span className="text-sm font-medium">{status.replace('_', ' ')}</span>
+                          <span className="text-sm font-medium">{status == "IN_PROGRESS" ? 'In Progess' : 'Completed'}</span>
                         </label>
                       ))}
                     </div>

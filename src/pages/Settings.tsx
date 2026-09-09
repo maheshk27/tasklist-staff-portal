@@ -1,6 +1,7 @@
 import React from 'react'
 import toast from 'react-hot-toast'
 import { useNotifications } from '../hooks/useNotifications'
+import { PageHeader } from '../components/PageHeader'
 
 const Settings: React.FC = () => {
   const { token, permission, messagingSupported, requestPermission, getFCMToken, disableNotifications } = useNotifications()
@@ -69,11 +70,10 @@ const Settings: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Settings</h1>
-        <p className="text-muted-foreground mt-2">Manage your application preferences</p>
-      </div>
-
+      <PageHeader
+        title="Settings"
+        subtitle="Manage your notification settings & preferences"
+      />
       <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
         <h2 className="text-xl font-semibold mb-4">Notifications</h2>
 

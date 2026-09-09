@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react'
 import { onboardingService } from '../services/apiManager'
 import type { LoginLog } from '../types/login-log'
 import { formatDateTime } from '../utils/date'
+import { PageHeader } from '../components/PageHeader'
 
 const LoginLogs: React.FC = () => {
   const [logs, setLogs] = useState<LoginLog[]>([])
@@ -27,10 +28,10 @@ const LoginLogs: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Login Logs</h1>
-        <p className="text-muted-foreground mt-2">Your recent login activity</p>
-      </div>
+      <PageHeader
+        title="Login Logs"
+        subtitle="Your recent login activity"
+      />
 
       {error && (
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
@@ -69,11 +70,10 @@ const LoginLogs: React.FC = () => {
                     </td>
                     <td className="px-4 py-3 whitespace-nowrap">
                       <span
-                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${
-                          log.loginStatus === 'SUCCESS'
+                        className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold ${log.loginStatus === 'SUCCESS'
                             ? 'bg-green-100 text-green-700'
                             : 'bg-red-100 text-red-700'
-                        }`}
+                          }`}
                       >
                         {log.loginStatus}
                       </span>

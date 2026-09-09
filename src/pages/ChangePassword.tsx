@@ -2,6 +2,7 @@ import React, { useState } from 'react'
 import FormField from '../components/ui/FormField'
 import { ActionButton } from '../components/ui/ActionButton'
 import { onboardingService } from '../services/apiManager'
+import PageHeader from '../components/PageHeader'
 
 const ChangePassword: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -88,11 +89,10 @@ const ChangePassword: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Change Password</h1>
-        <p className="text-muted-foreground mt-2">Update your account password</p>
-      </div>
-
+      <PageHeader
+        title="Change Password"
+        subtitle="Update your account password"
+        />
       <div className="bg-card border border-border rounded-lg p-6 shadow-sm max-w-xl">
         {isSuccess && (
           <div className="mb-6 p-4 bg-green-100 border border-green-200 rounded-md">

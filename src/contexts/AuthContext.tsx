@@ -2,6 +2,11 @@ import React, { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { authService } from '../services/auth'
 import type { AuthState } from '../types/auth'
 import { AuthContext, type AuthContextType } from './AuthContextType'
+import {
+  getStoredUserDetails,
+  storeUserDetails,
+  clearStoredUserDetails,
+} from '../utils/auth'
 
 interface AuthProviderProps {
   children: ReactNode
@@ -27,7 +32,15 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       
       if (accessToken && !authService.isTokenExpired()) {
         // Token is valid, get user info
-        const user = await authService.getCurrentUser()
+        // Prefer the full user details persisted in localStorage on login (they
+        // contain the complete profile); fall back to the JWT-decoded user.
+        let user = getStoredUserDetails()
+        if (!user) {
+          user = await authService.getCurrentUser()
+          if (user) {
+            storeUserDetails(user)
+          }
+        }
         if (user) {
           setState(prev => ({
             ...prev,
@@ -38,6 +51,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         } else {
           // Token is invalid, clear it
           authService.clearTokens()
+          clearStoredUserDetails()
           setState(prev => ({
             ...prev,
             user: null,
@@ -46,7 +60,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }))
         }
       } else {
-        // No valid token
+        // No valid token — also clear any stale user details
+        clearStoredUserDetails()
         setState(prev => ({
           ...prev,
           user: null,
@@ -74,6 +89,9 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
       if (response.success) {
         const { accessToken, refreshToken, user } = response.data
         authService.setTokens(accessToken, refreshToken)
+        // Persist the full user details so Profile, Layout, etc. can use them
+        // (also after a page refresh) where the JWT only carries a subset of fields.
+        storeUserDetails(user)
 
         setState(prev => ({
           ...prev,
@@ -104,6 +122,8 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error)
     } finally {
+      // Clear the persisted user details too
+      clearStoredUserDetails()
       setState(prev => ({
         ...prev,
         user: null,

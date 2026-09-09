@@ -46,7 +46,7 @@ const UserStoreList: React.FC<UserStoreListProps> = ({ userId }) => {
   if (isLoading) {
     return (
       <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Assigned Stores</h2>
+        <h2 className="font-medium mb-4">Assigned Stores</h2>
         <div className="flex items-center justify-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -57,7 +57,7 @@ const UserStoreList: React.FC<UserStoreListProps> = ({ userId }) => {
   if (error) {
     return (
       <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Assigned Stores</h2>
+        <h2 className="font-medium mb-4">Assigned Stores</h2>
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
           <p className="text-destructive text-sm">{error}</p>
         </div>
@@ -68,7 +68,7 @@ const UserStoreList: React.FC<UserStoreListProps> = ({ userId }) => {
   if (stores.length === 0) {
     return (
       <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-        <h2 className="text-xl font-semibold mb-4">Assigned Stores</h2>
+        <h2 className="font-medium mb-4">Assigned Stores</h2>
         <p className="text-muted-foreground text-sm">No stores assigned</p>
       </div>
     )
@@ -76,7 +76,7 @@ const UserStoreList: React.FC<UserStoreListProps> = ({ userId }) => {
 
   return (
     <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
-      <h2 className="text-xl font-semibold mb-4">
+      <h2 className="font-semibold mb-4">
         Assigned Stores
         <span className="ml-2 text-sm font-normal text-muted-foreground">({stores.length})</span>
       </h2>
@@ -85,10 +85,10 @@ const UserStoreList: React.FC<UserStoreListProps> = ({ userId }) => {
         {stores.map(({ store, mapping }) => (
           <div
             key={store.storeId}
-            className="border border-border rounded-lg p-4 hover:shadow-md transition-shadow bg-background"
+            className="border border-border rounded-lg p-4 hover:shadow-md transition-shadow bg-background space-y-2"
           >
             {/* Store Name & Badge */}
-            <div className="flex items-start justify-between gap-2 mb-3">
+            <div className="flex items-start justify-between gap-2">
               <h3 className="font-semibold text-foreground">{store.storeName}</h3>
               <span
                 className={`shrink-0 px-2 py-0.5 text-xs font-medium rounded-full ${mapping.isActive
@@ -101,32 +101,33 @@ const UserStoreList: React.FC<UserStoreListProps> = ({ userId }) => {
             </div>
 
             {/* Store Code */}
-            <p className="text-xs text-muted-foreground mb-2">Code: {store.storeCode}</p>
+            <p className="text-sm text-muted-foreground">Code: {store.storeCode}</p>
 
             {/* Address */}
-            <div className="text-sm text-muted-foreground space-y-0.5 mb-2">
-              <p>{store.addressLine1}</p>
+            <div className="text-sm text-muted-foreground space-y-0.5">
+              {[store.addressLine1, store.addressLine2, store.city, store.state, store.pinCode].join(", ")}
+              {/* <p>{store.addressLine1}</p>
               {store.addressLine2 && <p>{store.addressLine2}</p>}
               <p>
                 {store.city}, {store.state} {store.pinCode}
-              </p>
+              </p> */}
             </div>
 
-            {mapping.isActive ? (
-              <p className="text-sm text-muted-foreground mb-2">
-                Assigned On:{' '}
-                {mapping?.assignedAt
-                  ? formatDateTime(mapping.assignedAt)
-                  : '-'}
-              </p>
-            ) : (
-              <p className="text-sm text-muted-foreground mb-2">
+
+            <p className="text-sm text-muted-foreground">
+              Assigned On:{' '}
+              {mapping?.assignedAt
+                ? formatDateTime(mapping.assignedAt)
+                : '-'}
+            </p>
+            {mapping.isActive == false ? (
+              <p className="text-sm text-muted-foreground">
                 Unassigned On:{' '}
                 {mapping?.unAssignedAt
                   ? formatDateTime(mapping.unAssignedAt)
                   : '-'}
               </p>
-            )}
+            ) : undefined}
           </div>
         ))}
       </div>

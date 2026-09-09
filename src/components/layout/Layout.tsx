@@ -258,29 +258,29 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
                   ) : notifications.length === 0 ? (
                     <div className="text-center py-10"><Bell className="w-12 h-12 text-muted-foreground/30 mx-auto mb-2" /><p className="text-sm text-muted-foreground">No notifications</p></div>
                   ) : (
-                    notifications.map((notification) => (
-                      <div key={notification.notificationId} className={`p-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${notification.isRead ? 'opacity-60' : ''}`}>
-                        <div className="flex items-start justify-between gap-2">
-                          <button type="button" onClick={() => handleOpenNotification(notification)} className="min-w-0 flex-1 text-left">
+                    <div className="max-h-[400px] overflow-y-auto">
+                      {notifications.map((notification) => (
+                        <div key={notification.notificationId} className={`p-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${notification.isRead ? 'opacity-60' : ''}`}>
+                          <button type="button" onClick={() => handleOpenNotification(notification)} className="min-w-0 w-full text-left mb-2">
                             <p className="text-sm font-medium text-foreground truncate">{notification.title || 'Notification'}</p>
                             <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.body || ''}</p>
                             <p className="text-[10px] text-muted-foreground/60 mt-1">{notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}</p>
                           </button>
-                        </div>
-                        <div className="shrink-0 flex flex-col items-end gap-1 mt-2">
-                          <button type="button" onClick={() => handleOpenNotification(notification)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                            <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0-8.268-2.943-9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" /></svg>
-                            View
-                          </button>
-                          {!notification.isRead && (
-                            <button type="button" onClick={() => handleMarkAsRead(notification.notificationId)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                              Mark as read
+                          <div className="flex items-center justify-end gap-1">
+                            <button type="button" onClick={() => handleOpenNotification(notification)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                              <Eye className="w-3 h-3" />
+                              View
                             </button>
-                          )}
+                            {!notification.isRead && (
+                              <button type="button" onClick={() => handleMarkAsRead(notification.notificationId)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                                Read
+                              </button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    ))
+                      ))}
+                    </div>
                   )}
                 </div>
               )}

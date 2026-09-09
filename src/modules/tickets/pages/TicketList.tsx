@@ -5,8 +5,11 @@ import { onboardingService, ticketService } from '../../../services/apiManager'
 import type { TicketResponseDto, TicketCategoryDto, TicketFilterParams } from '../../../types/ticket'
 import type { StoreWithMapping } from '../../../types/user-store'
 import { formatDateTime } from '../../../utils/date'
-import { Search, ChevronDown } from 'lucide-react'
+import { Search, ChevronDown, LayoutGrid, SquareKanban } from 'lucide-react'
 import PageHeader from '../../../components/PageHeader'
+import FilterSection from '../../../components/FilterSection'
+import FormSelect from '../../../components/ui/FormSelect'
+import FormField from '../../../components/ui/FormField'
 
 // ── Status constants ────────────────────────────────────────────────────────
 
@@ -208,23 +211,6 @@ const TicketList: React.FC = () => {
 
   // ── Render helpers ────────────────────────────────────────────────────────
 
-  const renderStoreSelector = () => {
-    if (isLoadingStores) return <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary" />
-    if (stores.length === 0) return <p className="text-muted-foreground text-sm">No active stores assigned.</p>
-    return (
-      <select
-        value={selectedStoreId ?? ''}
-        onChange={(e) => setSelectedStoreId(Number(e.target.value))}
-        className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-      >
-        <option value="">All Stores</option>
-        {stores.map(({ store }) => (
-          <option key={store.storeId} value={store.storeId}>{store.storeName} ({store.storeCode})</option>
-        ))}
-      </select>
-    )
-  }
-
   // ── Ticket card (used in both card & board views) ─────────────────────────
 
   const renderTicketCard = (ticket: TicketResponseDto, compact = false) => {
@@ -234,7 +220,7 @@ const TicketList: React.FC = () => {
         <button
           key={ticket.ticketId}
           onClick={() => navigate(`/tickets/${ticket.ticketId}`)}
-          className="w-full text-left p-3 bg-card rounded-lg border border-border hover:shadow-md transition-shadow hover:border-primary/30"
+          className="w-full text-left p-3 bg-card bg-background rounded-lg border border-border hover:shadow-md transition-shadow hover:border-primary/30"
         >
           <div className="flex items-center justify-between gap-2 mb-1">
             <span className="text-xs font-semibold text-primary truncate">{ticket.ticketNumber}</span>
@@ -257,7 +243,7 @@ const TicketList: React.FC = () => {
       <button
         key={ticket.ticketId}
         onClick={() => navigate(`/tickets/${ticket.ticketId}`)}
-        className="w-full text-left border border-border rounded-lg p-4 bg-card hover:shadow-md transition-shadow hover:border-primary/30 group"
+        className="w-full text-left border border-border rounded-lg bg-background p-4 hover:shadow-md transition-shadow hover:border-primary/30 group"
       >
         <div className="flex items-start justify-between gap-4 mb-3">
           <div className="flex-1 min-w-0">
@@ -316,26 +302,47 @@ const TicketList: React.FC = () => {
     )
   }
 
-  // ── Tab bar ───────────────────────────────────────────────────────────────
+  // ── Tab bar + layout toggle (rendered in PageHeader actions) ───────────────
 
   const renderTabs = () => (
     <PageHeader
       title="Tickets"
       subtitle="Manage and track tickets"
       actions={
-        <div className="flex items-center gap-4 flex-wrap">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 w-full sm:w-auto">
           <div className="flex bg-muted rounded-lg p-1">
             <button
               onClick={() => setActiveTab('raised')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'raised' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'raised' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Raised By Me
             </button>
             <button
               onClick={() => setActiveTab('assigned')}
-              className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'assigned' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
+              className={`flex-1 sm:flex-none px-4 py-2 rounded-md text-sm font-medium transition-colors ${activeTab === 'assigned' ? 'bg-background text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'}`}
             >
               Assigned To Me
+            </button>
+          </div>
+          {/* Layout view switcher */}
+          <div className="inline-flex rounded-xl border border-border bg-card p-1 self-start sm:self-auto">
+            <button
+              onClick={() => setLayout('board')}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${layout === 'board'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              <SquareKanban className="h-4 w-4" />
+              <span>Board</span>
+            </button>
+            <button
+              onClick={() => setLayout('card')}
+              className={`inline-flex items-center justify-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${layout === 'card'
+                ? 'bg-primary text-primary-foreground shadow-sm'
+                : 'text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              <LayoutGrid className="h-4 w-4" />
+              <span>Card</span>
             </button>
           </div>
         </div>
@@ -346,68 +353,53 @@ const TicketList: React.FC = () => {
   // ── Filters ───────────────────────────────────────────────────────────────
 
   const renderFilters = () => (
-    <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
-      <h3 className="text-sm font-semibold mb-3">Advanced Filters</h3>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">Store</label>
-          {renderStoreSelector()}
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">Category</label>
-          <select
-            value={selectedCategoryId ?? ''}
-            onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)}
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          >
-            <option value="">All Categories</option>
-            {categories.filter(c => c.isActive).map(cat => (
-              <option key={cat.ticketCategoryId} value={cat.ticketCategoryId}>{cat.categoryName}</option>
-            ))}
-          </select>
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">From Date</label>
-          <input
-            type="date"
-            value={dateFrom}
-            onChange={(e) => setDateFrom(e.target.value)}
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">To Date</label>
-          <input
-            type="date"
-            value={dateTo}
-            onChange={(e) => setDateTo(e.target.value)}
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-          />
-        </div>
-        {/* Layout toggle */}
-        <div>
-          <label className="text-xs text-muted-foreground block mb-1">View</label>
-          <div className="flex border border-border rounded-lg overflow-hidden h-[38px]">
-            <button
-              onClick={() => setLayout('board')}
-              className={`px-3 py-2 text-sm flex items-center gap-1.5 transition-colors flex-1 ${layout === 'board' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 17V7m0 10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2h2a2 2 0 012 2m0 10a2 2 0 002 2h2a2 2 0 002-2M9 7a2 2 0 012-2h2a2 2 0 012 2m0 10V7m0 10a2 2 0 002 2h2a2 2 0 002-2V7a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
-              </svg>
-              Board
-            </button>
-            <button
-              onClick={() => setLayout('card')}
-              className={`px-3 py-2 text-sm flex items-center gap-1.5 transition-colors flex-1 ${layout === 'card' ? 'bg-primary text-primary-foreground' : 'bg-background text-muted-foreground hover:bg-muted'}`}
-            >
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
-              </svg>
-              Card
-            </button>
+    <div className="bg-card rounded-xl border border-border">
+      <FilterSection title="Search Filters" />
+      <div className="p-4">
+        {isLoadingStores ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
           </div>
-        </div>
+        ) : (
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            <FormSelect
+              label="Store"
+              name="selectedStoreId"
+              value={selectedStoreId ?? ''}
+              onChange={(e) => setSelectedStoreId(e.target.value ? Number(e.target.value) : null)}
+              options={stores.map(({ store }) => ({
+                value: store.storeId,
+                label: `${store.storeName} (${store.storeCode})`,
+              }))}
+              placeholder="All Stores"
+            />
+            <FormSelect
+              label="Category"
+              name="selectedCategoryId"
+              value={selectedCategoryId ?? ''}
+              onChange={(e) => setSelectedCategoryId(e.target.value ? Number(e.target.value) : null)}
+              options={categories.filter(c => c.isActive).map(cat => ({
+                value: cat.ticketCategoryId,
+                label: cat.categoryName,
+              }))}
+              placeholder="All Categories"
+            />
+            <FormField
+              label="From Date"
+              name="dateFrom"
+              type="date"
+              value={dateFrom}
+              onChange={(e) => setDateFrom(e.target.value)}
+            />
+            <FormField
+              label="To Date"
+              name="dateTo"
+              type="date"
+              value={dateTo}
+              onChange={(e) => setDateTo(e.target.value)}
+            />
+          </div>
+        )}
       </div>
     </div>
   )

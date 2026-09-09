@@ -7,6 +7,11 @@ import {
   StoreIcon,
   MapPin,
   X,
+  Clock,
+  Activity,
+  CheckCircle2,
+  AlertTriangle,
+  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { onboardingService, taskService } from '../services/apiManager'
@@ -79,16 +84,16 @@ const KANBAN_COLUMNS: KanbanColumn[] = [
   },
 ]
 
-// ── Theme-aware status accent dots (summary cards) ─────────────────────────────
+// ── Theme-aware status summary cards ───────────────────────────────────────────
 // Staff portal themes via .dark CSS tokens (no dark: variants), so summary
 // cards use neutral theme tokens (bg-card / border-border) and keep the status
-// identity through a colored dot. 500-level tones stay visible on light & dark.
-const STATUS_SUMMARY_DOTS: Record<TaskExecutionStatus, string> = {
-  NOT_STARTED: 'bg-gray-500',
-  IN_PROGRESS: 'bg-blue-500',
-  COMPLETED: 'bg-green-500',
-  SKIPPED: 'bg-yellow-500',
-  OVERDUE: 'bg-red-500',
+// identity through a colored icon + label. 500-level tones stay visible on light & dark.
+const STATUS_SUMMARY_ICONS: Record<TaskExecutionStatus, { icon: LucideIcon; dot: string }> = {
+  NOT_STARTED: { icon: Clock, dot: 'bg-gray-500' },
+  IN_PROGRESS: { icon: Activity, dot: 'bg-blue-500' },
+  COMPLETED: { icon: CheckCircle2, dot: 'bg-green-500' },
+  SKIPPED: { icon: AlertTriangle, dot: 'bg-yellow-500' },
+  OVERDUE: { icon: AlertTriangle, dot: 'bg-red-500' },
 }
 
 const MyTasks: React.FC = () => {
@@ -240,23 +245,32 @@ const MyTasks: React.FC = () => {
 
     return (
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {ALL_TASK_STATUSES.map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(statusFilter === status ? null : status)}
-            className={`rounded-xl cursor-pointer border border-border bg-card p-3 text-center transition-colors ${
-              statusFilter === status ? 'ring-2 ring-primary' : 'hover:opacity-80'
-            }`}
-          >
-            <div className="text-2xl font-bold text-foreground">{statusCounts[status]}</div>
-            <div className="flex items-center justify-center gap-1.5 mt-0.5">
-              <span className={`h-2 w-2 rounded-full ${STATUS_SUMMARY_DOTS[status]}`} />
-              <span className="text-xs font-medium text-muted-foreground">
-                {TASK_STATUS_LABELS[status]}
-              </span>
-            </div>
-          </button>
-        ))}
+        {ALL_TASK_STATUSES.map((status) => {
+          const { icon: Icon, dot } = STATUS_SUMMARY_ICONS[status]
+          const isActive = statusFilter === status
+          return (
+            <button
+              key={status}
+              onClick={() => setStatusFilter(isActive ? null : status)}
+              className={`rounded-2xl border border-border bg-card p-4 text-center shadow-sm transition-all ${
+                isActive ? 'ring-2 ring-primary' : 'hover:opacity-80 hover:shadow-md'
+              }`}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
+                  <span className="text-xs font-medium text-muted-foreground truncate">
+                    {TASK_STATUS_LABELS[status]}
+                  </span>
+                </div>
+                <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
+              </div>
+              <div className="text-2xl font-extrabold text-foreground">
+                {statusCounts[status]}
+              </div>
+            </button>
+          )
+        })}
       </div>
     )
   }

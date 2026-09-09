@@ -92,6 +92,33 @@ export const TASK_STATUS_BOARD_COLORS: Record<TaskExecutionStatus, string> = {
   OVERDUE: 'border-red-300 bg-red-50',
 }
 
+// Status summary card styles (with icon support for enhanced UI)
+export const TASK_STATUS_SUMMARY_STYLES: Record<TaskExecutionStatus, {
+  text: string
+  chip: string
+}> = {
+  NOT_STARTED: {
+    text: 'text-gray-700 dark:text-gray-200',
+    chip: 'bg-gray-100/80 text-gray-600',
+  },
+  IN_PROGRESS: {
+    text: 'text-blue-700 dark:text-blue-300',
+    chip: 'bg-blue-100/80 text-blue-600',
+  },
+  COMPLETED: {
+    text: 'text-green-700 dark:text-green-300',
+    chip: 'bg-green-100/80 text-green-600',
+  },
+  SKIPPED: {
+    text: 'text-yellow-700 dark:text-yellow-300',
+    chip: 'bg-yellow-100/80 text-yellow-600',
+  },
+  OVERDUE: {
+    text: 'text-red-700 dark:text-red-300',
+    chip: 'bg-red-100/80 text-red-600',
+  },
+}
+
 export const ALL_TASK_STATUSES: TaskExecutionStatus[] = [
   'NOT_STARTED',
   'IN_PROGRESS',

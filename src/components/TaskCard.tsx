@@ -8,6 +8,8 @@ export interface TaskCardProps {
   onClick: (task: TaskExecution) => void
   /** Compact variant for kanban/board columns */
   compact?: boolean
+  /** Show the assigned store & user details (used on team/management views) */
+  showAssignment?: boolean
   className?: string
 }
 
@@ -15,8 +17,15 @@ export interface TaskCardProps {
  * TaskCard — shared task-execution card used across staff-portal pages
  * (My Tasks grid + kanban layouts). The `compact` variant is trimmed for
  * board columns; the full variant shows the complete task summary.
+ * Pass `showAssignment` to also display the assigned store & user.
  */
-const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, compact = false, className = '' }) => {
+const TaskCard: React.FC<TaskCardProps> = ({
+  task,
+  onClick,
+  compact = false,
+  showAssignment = false,
+  className = '',
+}) => {
   const status = task.executionStatus as TaskExecutionStatus
   const statusColorClass = TASK_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800'
   const statusLabel = TASK_STATUS_LABELS[status] || task.executionStatus
@@ -43,6 +52,22 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, compact = false, cla
             <span>·</span>
             <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
           </div>
+
+          {/* Assigned store / user (team views) */}
+          {showAssignment && (
+            <>
+              {task.store && (
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Store: {task.store.storeName} ({task.store.storeCode})
+                </p>
+              )}
+              {task.user && (
+                <p className="text-[11px] text-muted-foreground truncate">
+                  Assigned to: {task.user.firstName} {task.user.lastName}
+                </p>
+              )}
+            </>
+          )}
 
           {/* Status chip */}
           <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
@@ -72,6 +97,22 @@ const TaskCard: React.FC<TaskCardProps> = ({ task, onClick, compact = false, cla
           <span>{formatDate(task.executionDate)}</span>
           <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
         </div>
+
+        {/* Assigned store / user (team views) */}
+        {showAssignment && (
+          <>
+            {task.store && (
+              <p className="text-xs text-muted-foreground">
+                Store: {task.store.storeName} ({task.store.storeCode})
+              </p>
+            )}
+            {task.user && (
+              <p className="text-xs text-muted-foreground">
+                Assigned to: {task.user.firstName} {task.user.lastName}
+              </p>
+            )}
+          </>
+        )}
 
         {/* Picked by — left aligned */}
         {task.pickedByUser && (

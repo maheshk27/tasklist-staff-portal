@@ -5,7 +5,7 @@ interface FormFieldProps {
   name: string
   value: string
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  type?: 'text' | 'email' | 'tel' | 'password' | 'date'
+  type?: 'text' | 'email' | 'tel' | 'password' | 'date' | 'textarea'
   placeholder?: string
   error?: string
   required?: boolean
@@ -14,6 +14,8 @@ interface FormFieldProps {
   minLength?: number
   maxLength?: number
   icon?: React.ReactNode
+  rows?: number
+  className?: string
 }
 
 const FormField: React.FC<FormFieldProps> = ({
@@ -29,7 +31,9 @@ const FormField: React.FC<FormFieldProps> = ({
   showPasswordToggle = false,
   minLength,
   maxLength,
-  icon
+  icon,
+  rows,
+  className = ''
 }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
@@ -48,7 +52,7 @@ const FormField: React.FC<FormFieldProps> = ({
   }
 
   return (
-    <div className="space-y-2">
+    <div className={`space-y-2 ${className}`}>
       <label htmlFor={name} className="block text-sm font-medium text-foreground">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
@@ -59,21 +63,34 @@ const FormField: React.FC<FormFieldProps> = ({
             {icon}
           </span>
         )}
-        <input
-          type={getInputType()}
+        {type === 'textarea' ? <textarea
           id={name}
           name={name}
           value={value}
-          onChange={onChange}
-          className={`w-full h-11 px-3 rounded-lg border bg-background text-foreground placeholder: text-sm placeholder:text-muted-foreground shadow-xs transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary/60 focus:shadow-sm ${
-            error ? 'border-red-500' : 'border-border'
-          } ${icon ? 'pl-11' : ''} ${shouldShowPasswordToggle ? 'pr-11' : ''}`}
+          className={`w-full px-3 rounded-lg border bg-background text-foreground placeholder: py-3 placeholder: text-sm placeholder:text-muted-foreground shadow-xs transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary/60 focus:shadow-sm ${error ? 'border-red-500' : 'border-border'
+            } ${icon ? 'pl-11' : ''} ${shouldShowPasswordToggle ? 'pr-11' : ''}`}
           placeholder={placeholder}
           disabled={disabled}
           required={required}
           minLength={minLength}
           maxLength={maxLength}
-        />
+          rows={rows}
+        /> :
+          <input
+            type={getInputType()}
+            id={name}
+            name={name}
+            value={value}
+            onChange={onChange}
+            className={`w-full h-11 px-3 rounded-lg border bg-background text-foreground placeholder: text-sm placeholder:text-muted-foreground shadow-xs transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary/60 focus:shadow-sm ${error ? 'border-red-500' : 'border-border'
+              } ${icon ? 'pl-11' : ''} ${shouldShowPasswordToggle ? 'pr-11' : ''}`}
+            placeholder={placeholder}
+            disabled={disabled}
+            required={required}
+            minLength={minLength}
+            maxLength={maxLength}
+          />
+        }
         {shouldShowPasswordToggle && (
           <button
             type="button"

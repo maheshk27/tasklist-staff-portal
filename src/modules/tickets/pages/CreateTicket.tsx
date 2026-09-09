@@ -4,7 +4,12 @@ import { useAuth } from '../../../hooks/useAuth'
 import { onboardingService, ticketService } from '../../../services/apiManager'
 import type { TicketListDto } from '../../../types/ticket'
 import type { StoreWithMapping } from '../../../types/user-store'
+import { ArrowLeft } from 'lucide-react'
+import PageHeader from '../../../components/PageHeader'
+import FormSelect from '../../../components/ui/FormSelect'
+import FormField from '../../../components/ui/FormField'
 import toast from 'react-hot-toast'
+import { ActionButton } from '../../../components/ui/ActionButton'
 
 const CreateTicket: React.FC = () => {
   const { user } = useAuth()
@@ -170,139 +175,104 @@ const CreateTicket: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-bold">Create New Ticket</h1>
-          <p className="text-muted-foreground mt-2">Submit a new support ticket</p>
-        </div>
-        <button
-          onClick={() => navigate('/tickets')}
-          className="px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium inline-flex items-center gap-2 shrink-0"
-        >
-          &larr; Back to Tickets
-        </button>
-      </div>
-      <form onSubmit={handleSubmit} className="bg-card border border-border rounded-lg p-6 shadow-sm space-y-5">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Store */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Store <span className="text-destructive">*</span>
-            </label>
-            <select
-              required
+      <PageHeader
+        title="Create New Ticket"
+        subtitle="Submit a new support ticket"
+        actions={
+          <button
+            onClick={() => navigate('/tickets')}
+            className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Back to Tickets
+          </button>
+        }
+      />
+
+      <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl shadow-sm space-y-5">
+        <div className="p-6 space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FormSelect
+              label="Store"
+              name="storeId"
               value={formData.storeId}
               onChange={(e) => handleStoreChange(Number(e.target.value))}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="">Select Store</option>
-              {stores.map(({ store }) => (
-                <option key={store.storeId} value={store.storeId}>
-                  {store.storeName} ({store.storeCode})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Department (drives the category dropdown) */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Department <span className="text-destructive">*</span>
-            </label>
-            <select
+              options={stores.map(({ store }) => ({
+                value: store.storeId,
+                label: `${store.storeName} (${store.storeCode})`,
+              }))}
+              placeholder="Select Store"
               required
+            />
+            <FormSelect
+              label="Department"
+              name="departmentId"
               value={formData.departmentId}
               onChange={(e) => handleDepartmentChange(Number(e.target.value))}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            >
-              <option value="">Select Department</option>
-              {departments.map(dept => (
-                <option key={dept.departmentId} value={dept.departmentId}>
-                  {dept.departmentName}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Category (filtered by the selected department) */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Category <span className="text-destructive">*</span>
-            </label>
-            <select
+              options={departments.map(dept => ({
+                value: dept.departmentId,
+                label: dept.departmentName,
+              }))}
+              placeholder="Select Department"
               required
+            />
+            <FormSelect
+              label="Category"
+              name="ticketCategoryId"
               value={formData.ticketCategoryId}
               onChange={(e) => handleCategoryChange(Number(e.target.value))}
-              disabled={!formData.departmentId}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
-            >
-              <option value="">Select Category</option>
-              {categories.map(cat => (
-                <option key={cat.ticketCategoryId} value={cat.ticketCategoryId}>
-                  {cat.categoryName}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Ticket (filtered by the selected department + category) */}
-          <div>
-            <label className="block text-sm font-medium mb-1">
-              Ticket <span className="text-destructive">*</span>
-            </label>
-            <select
+              options={categories.map(cat => ({
+                value: cat.ticketCategoryId,
+                label: cat.categoryName,
+              }))}
+              placeholder="Select Category"
               required
+              disabled={!formData.departmentId}
+            />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+            <FormSelect
+              label="Ticket"
+              name="ticketListId"
               value={formData.ticketListId}
               onChange={(e) => handleTicketChange(Number(e.target.value))}
+              options={filteredTicketLists.map(list => ({
+                value: list.ticketListId,
+                label: `${list.ticketTitle}${list.regionalText ? ` (${list.regionalText})` : ''}`,
+              }))}
+              placeholder="Select Ticket"
+              required
               disabled={!formData.ticketCategoryId}
-              className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary disabled:opacity-60"
-            >
-              <option value="">Select Ticket</option>
-              {filteredTicketLists.map(list => (
-                <option key={list.ticketListId} value={list.ticketListId}>
-                  {list.ticketTitle}{list.regionalText ? ` (${list.regionalText})` : ''}
-                </option>
-              ))}
-            </select>
+            />
+            <FormField
+              label="Description"
+              name="description"
+              type="textarea"
+              value={formData.description}
+              onChange={(e) => updateField('description', e.target.value)}
+              placeholder="Detailed description of the issue"
+              rows={4}
+              className="sm:col-span-2 lg:col-span-2"
+            />
           </div>
         </div>
-        {/* Description */}
-        <div>
-          <label className="block text-sm font-medium mb-1">Description</label>
-          <textarea
-            rows={4}
-            value={formData.description}
-            onChange={(e) => updateField('description', e.target.value)}
-            placeholder="Detailed description of the issue"
-            className="w-full p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y"
-          />
-        </div>
-
         {/* Actions */}
-        <div className="flex justify-between gap-3 pt-2">
+        <div className="flex justify-between gap-3 p-6 border-t border-border">
           <button
             type="button"
             onClick={() => navigate('/tickets')}
-            className="px-6 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm"
+            className="h-11 px-8 border border-border rounded-lg hover:bg-muted transition-colors text-sm"
           >
             Cancel
           </button>
-          <button
-            type="submit"
+          <ActionButton
+            variant='default'
+            action='add'
+            layout="grid"
+            size="lg"
             disabled={isSubmitting}
-            className="px-6 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            {isSubmitting ? (
-              <span className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                Creating...
-              </span>
-            ) : (
-              'Create Ticket'
-            )}
-          </button>
+            title={isSubmitting ? 'Creating' : 'Create Ticket'}
+          />
         </div>
       </form>
     </div>

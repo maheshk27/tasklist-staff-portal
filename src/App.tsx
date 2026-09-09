@@ -1,4 +1,5 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation } from 'react-router-dom'
+import { useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { Toaster } from 'react-hot-toast'
 import ProtectedRoute from './components/ProtectedRoute'
@@ -21,10 +22,22 @@ import SurveyList from './pages/SurveyList'
 import SurveyEntryPage from './pages/SurveyEntry'
 import LoginLogs from './pages/LoginLogs'
 
+// Scroll to top on route change
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
+
 function App() {
 
   return (
     <AuthProvider>
+      <ScrollToTop />
       <Routes>
         {/* Public routes without layout */}
         <Route path="/" element={<Login />} />
@@ -125,8 +138,13 @@ function App() {
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#363636',
-            color: '#fff',
+            // background: 'hsl(var(--card))',
+            // color: 'hsl(var(--foreground))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            fontSize: '14px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           },
           success: {
             duration: 3000,
@@ -134,12 +152,18 @@ function App() {
               primary: '#4ade80',
               secondary: '#fff',
             },
+            style: {
+              border: '1px solid rgba(74, 222, 128, 0.3)',
+            },
           },
           error: {
             duration: 5000,
             iconTheme: {
               primary: '#ef4444',
               secondary: '#fff',
+            },
+            style: {
+              border: '1px solid rgba(239, 68, 68, 0.3)',
             },
           },
         }}

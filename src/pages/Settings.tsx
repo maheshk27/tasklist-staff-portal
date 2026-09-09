@@ -55,20 +55,64 @@ const Settings: React.FC = () => {
   }, [])
 
   const handleInstallPwa = useCallback(async () => {
-    if (!deferredPrompt) return
-
-    setIsInstalling(true)
-    try {
-      deferredPrompt.prompt()
-      const { outcome } = await deferredPrompt.userChoice
-      if (outcome === 'accepted') {
-        toast.success('Installing app...')
+    // If we have the deferred prompt, use it
+    if (deferredPrompt) {
+      setIsInstalling(true)
+      try {
+        deferredPrompt.prompt()
+        const { outcome } = await deferredPrompt.userChoice
+        if (outcome === 'accepted') {
+          toast.success('Installing app...')
+        }
+        setDeferredPrompt(null)
+      } catch {
+        toast.error('Failed to install app')
+      } finally {
+        setIsInstalling(false)
       }
-      setDeferredPrompt(null)
-    } catch {
-      toast.error('Failed to install app')
-    } finally {
-      setIsInstalling(false)
+      return
+    }
+
+    // If no deferred prompt, show manual install instructions
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent)
+    const isAndroid = /Android/.test(navigator.userAgent)
+
+    if (isIOS) {
+      toast.success(
+        () => (
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold text-foreground">Install on iOS</p>
+            <p className="text-sm text-muted-foreground">
+              Tap <span className="font-medium text-foreground">Share</span> <span className="text-lg">⎋</span> then <span className="font-medium text-foreground">"Add to Home Screen"</span> <span className="text-lg">➕</span>
+            </p>
+          </div>
+        ),
+        { duration: 6000 }
+      )
+    } else if (isAndroid) {
+      toast.success(
+        () => (
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold text-foreground">Install on Android</p>
+            <p className="text-sm text-muted-foreground">
+              Tap menu <span className="font-medium text-foreground">⋮</span> then <span className="font-medium text-foreground">"Add to Home Screen"</span> or <span className="font-medium text-foreground">"Install app"</span>
+            </p>
+          </div>
+        ),
+        { duration: 6000 }
+      )
+    } else {
+      toast.success(
+        () => (
+          <div className="flex flex-col gap-1">
+            <p className="font-semibold text-foreground">Install on Desktop</p>
+            <p className="text-sm text-muted-foreground">
+              Use Chrome/Edge menu → <span className="font-medium text-foreground">"Install app"</span> or <span className="font-medium text-foreground">"Add to Home Screen"</span>
+            </p>
+          </div>
+        ),
+        { duration: 6000 }
+      )
     }
   }, [deferredPrompt])
 
@@ -250,7 +294,7 @@ const Settings: React.FC = () => {
               ) : (
                 <button
                   onClick={handleInstallPwa}
-                  disabled={isInstalling || !deferredPrompt}
+                  disabled={isInstalling}
                   className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4 flex-shrink-0" />
@@ -260,7 +304,7 @@ const Settings: React.FC = () => {
             </div>
           </div>
 
-          {!isPwaInstalled && !deferredPrompt && (
+          {!isPwaInstalled && (
             <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
               To install the app, use Chrome, Edge, or Safari on your device. Look for the "Add to Home Screen" option in your browser menu.
             </p>

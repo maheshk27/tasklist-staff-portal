@@ -22,6 +22,10 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true,
+        type: 'classic',
+      },
       includeAssets: ['favicon.svg', 'rk-logo.png', 'icons.svg'],
       manifest: {
         name: 'RK Bazar Staff Portal',

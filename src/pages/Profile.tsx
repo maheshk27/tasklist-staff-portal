@@ -148,7 +148,7 @@ const Profile: React.FC = () => {
           {/* Profile Header */}
           <div className="bg-card p-8 rounded-xl border border-border">
             <div className="flex items-center gap-6">
-              <div className="w-24 h-24 bg-primary/10 rounded-xl flex items-center justify-center">
+              <div className="hidden md:flex w-24 h-24 bg-primary/10 rounded-xl items-center justify-center">
                 <UserIcon className="h-12 w-12 text-primary" />
               </div>
               <div className="flex-1">

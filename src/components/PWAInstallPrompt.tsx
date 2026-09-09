@@ -14,8 +14,13 @@ declare global {
 
 const PWAInstallPrompt = () => {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
-  const [isVisible, setIsVisible] = useState(false)
   const [isDismissed, setIsDismissed] = useState(false)
+  // Initialize visibility based on whether app is already installed (standalone mode)
+  const [isVisible, setIsVisible] = useState(() => {
+    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+    const isStandaloneNavigator = (window.navigator as unknown as { standalone?: boolean }).standalone
+    return !isStandalone && !isStandaloneNavigator
+  })
 
   useEffect(() => {
     const handler = (e: BeforeInstallPromptEvent) => {
@@ -25,11 +30,6 @@ const PWAInstallPrompt = () => {
     }
 
     window.addEventListener('beforeinstallprompt', handler)
-
-    const isStandalone = window.matchMedia('(display-mode: standalone)').matches
-    if (isStandalone) {
-      setIsVisible(false)
-    }
 
     return () => {
       window.removeEventListener('beforeinstallprompt', handler)
@@ -61,7 +61,7 @@ const PWAInstallPrompt = () => {
   if (!isVisible || isDismissed) return null
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 max-w-sm mx-auto">
+    <div className="fixed bottom-4 left-4 right-4 z-50 max-w-md mx-auto">
       <div className="bg-card border border-border rounded-lg shadow-lg p-4 flex items-center gap-3">
         <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold shrink-0">
           RB

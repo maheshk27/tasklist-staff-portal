@@ -294,8 +294,7 @@ const Settings: React.FC = () => {
               ) : (
                 <button
                   onClick={handleInstallPwa}
-                  disabled={isInstalling}
-                  className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto"
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium whitespace-nowrap w-full sm:w-auto"
                 >
                   <Download className="h-4 w-4 flex-shrink-0" />
                   <span>{isInstalling ? 'Installing...' : 'Install App'}</span>

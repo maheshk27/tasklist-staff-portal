@@ -14,6 +14,7 @@ import PageHeader from '../components/PageHeader'
 import FilterSection from '../components/FilterSection'
 import FormSelect from '../components/ui/FormSelect'
 import FormField from '../components/ui/FormField'
+import TaskCard from '../components/TaskCard'
 import type { StoreWithMapping } from '../types/user-store'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import {
@@ -381,65 +382,6 @@ const MyTasks: React.FC = () => {
     </div>
   )
 
-  // ── Render task card (used in Grid layout) ───────────────────────────────────
-  const renderTaskCard = (task: TaskExecution) => {
-    const status = task.executionStatus as TaskExecutionStatus
-    const statusColorClass = TASK_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800'
-    const statusLabel = TASK_STATUS_LABELS[status] || task.executionStatus
-
-    return (
-      <button
-        key={task.taskExecutionId}
-        onClick={() => navigate(`/my-tasks/${task.taskExecutionId}`)}
-        className="w-full text-left border border-border rounded-lg p-3 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group"
-      >
-        <div className="space-y-2">
-          {/* Title — left aligned */}
-          <h3 className="font-medium text-foreground truncate">
-            {task.mstTask?.title || `Task #${task.mstTaskId}`}
-          </h3>
-
-          {/* Regional text — left aligned */}
-          {task.mstTask?.regionalText && (
-            <p className="text-sm text-muted-foreground truncate">
-              {task.mstTask.regionalText}
-            </p>
-          )}
-
-          {/* Schedule — left aligned */}
-          <div className="flex items-start gap-2 text-sm text-muted-foreground">
-            <span>🕐</span>
-            <span>{formatDate(task.executionDate)}</span>
-            <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
-          </div>
-
-          {/* Picked by — left aligned */}
-          {task.pickedByUser && (
-            <p className="text-xs text-muted-foreground">
-              Picked By: {task.pickedByUser.firstName} {task.pickedByUser.lastName}
-            </p>
-          )}
-
-          {/* Completed by — left aligned */}
-          {task.completedByUser && (
-            <p className="text-xs text-muted-foreground">
-              Completed By: {task.completedByUser.firstName} {task.completedByUser.lastName}
-            </p>
-          )}
-
-          {/* Status + chevron — items-start, left aligned */}
-          <div className="flex items-start justify-between gap-2">
-            <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
-              {statusLabel}
-            </span>
-            <svg className="w-4 h-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </div>
-        </div>
-      </button>
-    )
-  }
   // ── Render Grid layout ────────────────────────────────────────────────────────
   const renderGridLayout = () => {
     if (isLoadingTasks) {
@@ -473,7 +415,13 @@ const MyTasks: React.FC = () => {
 
     return (
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-4">
-        {sortedTasks.map(renderTaskCard)}
+        {sortedTasks.map((task) => (
+          <TaskCard
+            key={task.taskExecutionId}
+            task={task}
+            onClick={(t) => navigate(`/my-tasks/${t.taskExecutionId}`)}
+          />
+        ))}
       </div>
     )
   }
@@ -546,33 +494,12 @@ const MyTasks: React.FC = () => {
                 {/* Column body */}
                 <div className="p-3 space-y-3 min-h-[200px]">
                   {columnTasks.map((task) => (
-                    <div
+                    <TaskCard
                       key={task.taskExecutionId}
-                      className="rounded-lg border border-border bg-background p-3 hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
-                      onClick={() => navigate(`/my-tasks/${task.taskExecutionId}`)}
-                    >
-                      <div className="flex items-start justify-between gap-2 mb-2">
-                        <h5 className="text-sm font-medium truncate flex-1">
-                          {task.mstTask?.title || `Task #${task.mstTaskId}`}
-                        </h5>
-                      </div>
-                      {task.mstTask?.regionalText && (<div className="flex items-start justify-between gap-2 mb-2">
-                        <h5 className="text-sm text-muted-foreground truncate flex-1">
-                          {task.mstTask?.regionalText}
-                        </h5>
-                      </div>)}
-                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
-                        <span>{formatDate(task.executionDate)}</span>
-                        <span>·</span>
-                        <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
-                      </div>
-
-                      <div className="flex items-center gap-1.5">
-                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${column.colorClass}`}>
-                          {column.label}
-                        </span>
-                      </div>
-                    </div>
+                      task={task}
+                      compact
+                      onClick={(t) => navigate(`/my-tasks/${t.taskExecutionId}`)}
+                    />
                   ))}
 
                   {columnTasks.length === 0 && !statusFilter && (
@@ -702,7 +629,7 @@ const MyTasks: React.FC = () => {
       {selectedStoreId && !isLoadingTasks && tasks.length > 0 && (
         <div className='space-y-3'>
           <div className="flex items-center justify-between gap-2">
-            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-foreground">
               Summary
             </h2>
             <div className="flex items-center gap-2">

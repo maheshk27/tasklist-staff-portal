@@ -1,42 +1,124 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
+import {
+  LayoutGrid,
+  SquareKanban,
+  Table2,
+  StoreIcon,
+  MapPin,
+  X,
+} from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { onboardingService, taskService } from '../services/apiManager'
+import PageHeader from '../components/PageHeader'
+import FilterSection from '../components/FilterSection'
+import FormSelect from '../components/ui/FormSelect'
+import FormField from '../components/ui/FormField'
 import type { StoreWithMapping } from '../types/user-store'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
-import { TASK_STATUS_COLORS, TASK_STATUS_LABELS, TASK_STATUS_BOARD_COLORS, ALL_TASK_STATUSES } from '../types/task-execution'
+import {
+  TASK_STATUS_COLORS,
+  TASK_STATUS_LABELS,
+  ALL_TASK_STATUSES,
+} from '../types/task-execution'
 import { formatDate, formatTime } from '../utils/date'
 
-type TabType = 'today' | 'historical'
+type ViewMode = 'grid' | 'kanban' | 'table'
+
+// ── Kanban column configuration ────────────────────────────────────────────────
+interface KanbanColumn {
+  key: TaskExecutionStatus
+  label: string
+  colorClass: string
+  headerTextClass: string
+  countChipClass: string
+  columnStyle: string
+}
+
+const KANBAN_COLUMNS: KanbanColumn[] = [
+  {
+    key: 'NOT_STARTED',
+    label: 'Not Started',
+    colorClass: 'bg-gray-100 text-gray-800',
+    headerTextClass: 'text-gray-800',
+    countChipClass: 'bg-gray-100 text-gray-700',
+    columnStyle: 'border-gray-200 bg-gray-50/50',
+  },
+  {
+    key: 'IN_PROGRESS',
+    label: 'In Progress',
+    colorClass: 'bg-blue-100 text-blue-800',
+    headerTextClass: 'text-blue-800',
+    countChipClass: 'bg-blue-100 text-blue-700',
+    columnStyle: 'border-blue-200 bg-blue-50/50',
+  },
+  {
+    key: 'COMPLETED',
+    label: 'Completed',
+    colorClass: 'bg-green-100 text-green-800',
+    headerTextClass: 'text-green-800',
+    countChipClass: 'bg-green-100 text-green-700',
+    columnStyle: 'border-green-200 bg-green-50/50',
+  },
+  /* {
+    key: 'SKIPPED',
+    label: 'Skipped',
+    colorClass: 'bg-yellow-100 text-yellow-800',
+    headerTextClass: 'text-yellow-800',
+    countChipClass: 'bg-yellow-100 text-yellow-700',
+    columnStyle: 'border-yellow-200 bg-yellow-50/50',
+  }, */
+  {
+    key: 'OVERDUE',
+    label: 'Overdue',
+    colorClass: 'bg-red-100 text-red-800',
+    headerTextClass: 'text-red-800',
+    countChipClass: 'bg-red-100 text-red-700',
+    columnStyle: 'border-red-200 bg-red-50/50',
+  },
+]
+
+// ── Theme-aware status accent dots (summary cards) ─────────────────────────────
+// Staff portal themes via .dark CSS tokens (no dark: variants), so summary
+// cards use neutral theme tokens (bg-card / border-border) and keep the status
+// identity through a colored dot. 500-level tones stay visible on light & dark.
+const STATUS_SUMMARY_DOTS: Record<TaskExecutionStatus, string> = {
+  NOT_STARTED: 'bg-gray-500',
+  IN_PROGRESS: 'bg-blue-500',
+  COMPLETED: 'bg-green-500',
+  SKIPPED: 'bg-yellow-500',
+  OVERDUE: 'bg-red-500',
+}
 
 const MyTasks: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
 
-  // Stores
+  // ── Stores ────────────────────────────────────────────────────────────────────
   const [stores, setStores] = useState<StoreWithMapping[]>([])
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null)
   const [isLoadingStores, setIsLoadingStores] = useState(true)
   const [storesError, setStoresError] = useState<string | null>(null)
 
-  // Tabs
-  const [activeTab, setActiveTab] = useState<TabType>('today')
+  // ── Date (determines data source: today vs historical) ───────────────────────
+  const [selectedDate, setSelectedDate] = useState<string>('')
 
-  // Status filter (from summary click)
+  // ── View mode ─────────────────────────────────────────────────────────────────
+  const [viewMode, setViewMode] = useState<ViewMode>('grid')
+
+  // ── Sort (default: FromTime ASC) ──────────────────────────────────────────────
+  const [sortBy, setSortBy] = useState<'fromTime' | 'taskName' | 'regionalText'>('fromTime')
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc')
+
+  // ── Status filter (from summary click) ───────────────────────────────────────
   const [statusFilter, setStatusFilter] = useState<TaskExecutionStatus | null>(null)
 
-  // Today's tasks
-  const [todaysTasks, setTodaysTasks] = useState<TaskExecution[]>([])
-  const [isLoadingTodaysTasks, setIsLoadingTodaysTasks] = useState(false)
-  const [todaysTasksError, setTodaysTasksError] = useState<string | null>(null)
+  // ── Tasks (unified from today/historical API based on date) ──────────────────
+  const [tasks, setTasks] = useState<TaskExecution[]>([])
+  const [isLoadingTasks, setIsLoadingTasks] = useState(false)
+  const [tasksError, setTasksError] = useState<string | null>(null)
 
-  // Historical tasks
-  const [selectedDate, setSelectedDate] = useState<string>('')
-  const [historicalTasks, setHistoricalTasks] = useState<TaskExecution[]>([])
-  const [isLoadingHistoricalTasks, setIsLoadingHistoricalTasks] = useState(false)
-  const [historicalTasksError, setHistoricalTasksError] = useState<string | null>(null)
-
-  // Fetch assigned stores on mount
+  // ── Fetch assigned stores on mount ───────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
 
@@ -70,127 +152,236 @@ const MyTasks: React.FC = () => {
     return () => { cancelled = true }
   }, [user])
 
-  // Fetch today's tasks when store changes
-  useEffect(() => {
+  // ── Fetch tasks based on store + date ────────────────────────────────────────
+  // If date is selected → use historical API; otherwise → use today's API
+  const fetchTasks = useCallback(async () => {
     if (!selectedStoreId) return
 
-    let cancelled = false
-
-    const fetchTodaysTasks = async () => {
-      setIsLoadingTodaysTasks(true)
-      setTodaysTasksError(null)
-
-      try {
-        const response = await taskService.getTodaysTasks(selectedStoreId)
-        if (!cancelled) {
-          setTodaysTasks(response.data || [])
-        }
-      } catch (err) {
-        if (!cancelled) {
-          setTodaysTasksError(err instanceof Error ? err.message : 'Failed to fetch today\'s tasks')
-        }
-      } finally {
-        if (!cancelled) {
-          setIsLoadingTodaysTasks(false)
-        }
-      }
-    }
-
-    fetchTodaysTasks()
-    return () => { cancelled = true }
-  }, [selectedStoreId])
-
-  // Fetch historical tasks when store AND date change
-  const fetchHistoricalTasks = useCallback(async () => {
-    if (!selectedStoreId || !selectedDate) return
-
-    setIsLoadingHistoricalTasks(true)
-    setHistoricalTasksError(null)
+    setIsLoadingTasks(true)
+    setTasksError(null)
 
     try {
-      const response = await taskService.getHistoricalTasks(selectedStoreId, selectedDate)
-      setHistoricalTasks(response.data || [])
+      let response
+      if (selectedDate) {
+        // Historical: use date API
+        response = await taskService.getHistoricalTasks(selectedStoreId, selectedDate)
+      } else {
+        // Today: use today's task API
+        response = await taskService.getTodaysTasks(selectedStoreId)
+      }
+
+      setTasks(response.data || [])
     } catch (err) {
-      setHistoricalTasksError(err instanceof Error ? err.message : 'Failed to fetch historical tasks')
+      setTasksError(
+        err instanceof Error
+          ? err.message
+          : selectedDate
+            ? 'Failed to fetch historical tasks'
+            : "Failed to fetch today's tasks",
+      )
     } finally {
-      setIsLoadingHistoricalTasks(false)
+      setIsLoadingTasks(false)
     }
   }, [selectedStoreId, selectedDate])
 
   useEffect(() => {
-    fetchHistoricalTasks()
-  }, [fetchHistoricalTasks])
-
-  // Handle store selection
+    fetchTasks()
+  }, [fetchTasks])
+  // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleStoreSelect = (storeId: number) => {
     setSelectedStoreId(storeId)
+    setStatusFilter(null) // Reset filter on store change
   }
 
-  // Get selected store details
+  const handleDateChange = (date: string) => {
+    setSelectedDate(date)
+    setStatusFilter(null) // Reset filter on date change
+  }
+
+  // ── Get selected store details ────────────────────────────────────────────────
   const selectedStore = selectedStoreId
     ? stores.find(s => s.store.storeId === selectedStoreId)
     : null
 
-  // Render store dropdown with details
-  const renderStoreSelector = () => {
-    if (isLoadingStores) {
-      return (
-        <div className="flex justify-end">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-        </div>
-      )
-    }
+  // ── Tasks filtered by status (if filter active) ───────────────────────────────
+  const filteredTasks = statusFilter
+    ? tasks.filter((t) => t.executionStatus === statusFilter)
+    : tasks
 
-    if (storesError) {
-      return (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-          <p className="text-destructive text-sm">{storesError}</p>
-        </div>
-      )
+  // ── Tasks sorted by the selected sort key + direction ────────────────────────
+  const sortedTasks = [...filteredTasks].sort((a, b) => {
+    let cmp = 0
+    if (sortBy === 'fromTime') {
+      cmp = (a.fromTime || '').localeCompare(b.fromTime || '')
+    } else if (sortBy === 'taskName') {
+      const aTitle = (a.mstTask?.title || `Task #${a.mstTaskId}`).toLowerCase()
+      const bTitle = (b.mstTask?.title || `Task #${b.mstTaskId}`).toLowerCase()
+      cmp = aTitle.localeCompare(bTitle)
+    } else {
+      const aRegional = (a.mstTask?.regionalText || '').toLowerCase()
+      const bRegional = (b.mstTask?.regionalText || '').toLowerCase()
+      cmp = aRegional.localeCompare(bRegional)
     }
+    return sortDirection === 'asc' ? cmp : -cmp
+  })
 
-    if (stores.length === 0) {
-      return (
-        <p className="text-muted-foreground text-sm">No active stores assigned to you.</p>
-      )
-    }
+  // ── Status summary (counts per status) — common across all layouts ───────────
+  const renderStatusSummary = () => {
+    if (tasks.length === 0) return null
+
+    const statusCounts = ALL_TASK_STATUSES.reduce<Record<TaskExecutionStatus, number>>(
+      (acc, status) => {
+        acc[status] = tasks.filter((t) => t.executionStatus === status).length
+        return acc
+      },
+      {} as Record<TaskExecutionStatus, number>,
+    )
 
     return (
-      <div className="flex flex-col gap-3">
-        {/* Dropdown + count */}
-        <div className="flex items-center gap-3">
-          <label htmlFor="store-select" className="text-sm font-medium text-foreground whitespace-nowrap">
-            Store
-          </label>
-          <select
-            id="store-select"
-            value={selectedStoreId ?? ''}
-            onChange={(e) => handleStoreSelect(Number(e.target.value))}
-            className="p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[200px]"
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+        {ALL_TASK_STATUSES.map((status) => (
+          <button
+            key={status}
+            onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+            className={`rounded-xl cursor-pointer border border-border bg-card p-3 text-center transition-colors ${
+              statusFilter === status ? 'ring-2 ring-primary' : 'hover:opacity-80'
+            }`}
           >
-            {stores.map(({ store }) => (
-              <option key={store.storeId} value={store.storeId}>
-                {store.storeName} ({store.storeCode})
-              </option>
-            ))}
-          </select>
-          {/* <span className="text-xs text-muted-foreground whitespace-nowrap">
-            {stores.length} store{stores.length !== 1 ? 's' : ''}
-          </span> */}
-        </div>
-
-        {/* Selected store details */}
-        {selectedStore && (
-          <div className="text-xs text-muted-foreground py-1.5 rounded-md">
-            <p>{selectedStore.store.addressLine1}{selectedStore.store.addressLine2 ? `, ${selectedStore.store.addressLine2}` : ''}</p>
-            <p>{selectedStore.store.city}, {selectedStore.store.state} {selectedStore.store.pinCode}</p>
-          </div>
-        )}
+            <div className="text-2xl font-bold text-foreground">{statusCounts[status]}</div>
+            <div className="flex items-center justify-center gap-1.5 mt-0.5">
+              <span className={`h-2 w-2 rounded-full ${STATUS_SUMMARY_DOTS[status]}`} />
+              <span className="text-xs font-medium text-muted-foreground">
+                {TASK_STATUS_LABELS[status]}
+              </span>
+            </div>
+          </button>
+        ))}
       </div>
     )
   }
 
-  // Render task card
+  // ── View mode switcher (rendered in PageHeader actions) ───────────────────────
+  const renderViewSwitcher = () => {
+    if (!selectedStoreId) return null
+
+    const viewOptions = [
+      { key: 'grid' as const, label: 'Grid', icon: LayoutGrid },
+      { key: 'kanban' as const, label: 'Kanban', icon: SquareKanban },
+      { key: 'table' as const, label: 'Table', icon: Table2 },
+    ]
+
+    return (
+      <div className="inline-flex rounded-xl border border-border bg-card p-1">
+        {viewOptions.map(({ key, label, icon: Icon }) => (
+          <button
+            key={key}
+            onClick={() => setViewMode(key)}
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${viewMode === key
+              ? 'bg-primary text-primary-foreground shadow-sm'
+              : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+              }`}
+          >
+            <Icon className="h-4 w-4" />
+            <span>{label}</span>
+          </button>
+        ))}
+      </div>
+    )
+  }
+  // ── Render filters (search area: Store + Date) ────────────────────────────────
+  const renderFilters = () => (
+    <div className="bg-card rounded-xl border border-border">
+      <FilterSection
+        title="Search Filters"
+        hasActiveFilters={!!selectedDate}
+        actions={
+          selectedDate ? (
+            <button
+              onClick={() => handleDateChange('')}
+              className="inline-flex items-center gap-1.5 rounded-lg border border-border px-2.5 py-1 text-xs text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+            >
+              <X className="h-3.5 w-3.5" />
+              Clear Date
+            </button>
+          ) : null
+        }
+      />
+      <div className="p-4">
+        {isLoadingStores ? (
+          <div className="flex items-center justify-center py-8">
+            <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+          </div>
+        ) : storesError ? (
+          <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+            <p className="text-destructive text-sm">{storesError}</p>
+          </div>
+        ) : stores.length === 0 ? (
+          <p className="py-4 text-muted-foreground text-sm">No active stores assigned to you.</p>
+        ) : (
+          <>
+            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-4">
+              <FormSelect
+                label="Store"
+                name="selectedStoreId"
+                value={selectedStoreId ?? ''}
+                onChange={(e) => handleStoreSelect(Number(e.target.value))}
+                options={stores.map(({ store }) => ({
+                  value: store.storeId,
+                  label: `${store.storeName} (${store.storeCode})`,
+                }))}
+                placeholder="Select Store"
+                required
+              />
+              <FormField
+                label="Date"
+                name="selectedDate"
+                type="date"
+                value={selectedDate}
+                onChange={(e) => handleDateChange(e.target.value)}
+              />
+              <FormSelect
+                label="Sort By"
+                name="sortBy"
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'fromTime' | 'taskName' | 'regionalText')}
+                options={[
+                  { value: 'fromTime', label: 'From Time' },
+                  { value: 'taskName', label: 'Task Name' },
+                  { value: 'regionalText', label: 'Regional Text' },
+                ]}
+              />
+              <FormSelect
+                label="Order"
+                name="sortDirection"
+                value={sortDirection}
+                onChange={(e) => setSortDirection(e.target.value as 'asc' | 'desc')}
+                options={[
+                  { value: 'asc', label: 'Ascending (A → Z)' },
+                  { value: 'desc', label: 'Descending (Z → A)' },
+                ]}
+              />
+            </div>
+
+            {/* Selected store details */}
+            {selectedStore && (
+              <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground">
+                <span className="inline-flex items-center gap-1.5 font-semibold">
+                  <StoreIcon className="h-3.5 w-3.5 text-primary" />
+                  {selectedStore.store.storeName}
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <MapPin className="h-3.5 w-3.5" />
+                  {[selectedStore.store.addressLine1, selectedStore.store.addressLine2, selectedStore.store.city, selectedStore.store.state, selectedStore.store.pinCode].filter(Boolean).join(', ')}
+                </span>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </div>
+  )
+
+  // ── Render task card (used in Grid layout) ───────────────────────────────────
   const renderTaskCard = (task: TaskExecution) => {
     const status = task.executionStatus as TaskExecutionStatus
     const statusColorClass = TASK_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800'
@@ -200,73 +391,58 @@ const MyTasks: React.FC = () => {
       <button
         key={task.taskExecutionId}
         onClick={() => navigate(`/my-tasks/${task.taskExecutionId}`)}
-        className="w-full text-left border border-border rounded-lg p-4 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group"
+        className="w-full text-left border border-border rounded-lg p-3 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group"
       >
-        <div className="flex items-start justify-between gap-4 mb-3">
-          <div className="flex-1 min-w-0">
-            <h3 className="font-semibold text-foreground truncate">
-              {task.mstTask?.title || `Task #${task.mstTaskId}`}
-            </h3>
-            {task.mstTask?.regionalText && (
-              <p className="text-sm text-muted-foreground mt-0.5">{task.mstTask.regionalText}</p>
-            )}
+        <div className="space-y-2">
+          {/* Title — left aligned */}
+          <h3 className="font-medium text-foreground truncate">
+            {task.mstTask?.title || `Task #${task.mstTaskId}`}
+          </h3>
+
+          {/* Regional text — left aligned */}
+          {task.mstTask?.regionalText && (
+            <p className="text-sm text-muted-foreground truncate">
+              {task.mstTask.regionalText}
+            </p>
+          )}
+
+          {/* Schedule — left aligned */}
+          <div className="flex items-start gap-2 text-sm text-muted-foreground">
+            <span>🕐</span>
+            <span>{formatDate(task.executionDate)}</span>
+            <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
           </div>
-          <div className="flex items-center gap-2 shrink-0">
+
+          {/* Picked by — left aligned */}
+          {task.pickedByUser && (
+            <p className="text-xs text-muted-foreground">
+              Picked By: {task.pickedByUser.firstName} {task.pickedByUser.lastName}
+            </p>
+          )}
+
+          {/* Completed by — left aligned */}
+          {task.completedByUser && (
+            <p className="text-xs text-muted-foreground">
+              Completed By: {task.completedByUser.firstName} {task.completedByUser.lastName}
+            </p>
+          )}
+
+          {/* Status + chevron — items-start, left aligned */}
+          <div className="flex items-start justify-between gap-2">
             <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
               {statusLabel}
             </span>
-            <svg className="w-5 h-5 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
           </div>
         </div>
-
-        <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-          <span>🕐</span>
-          <span>{formatDate(task.executionDate)}</span>
-          <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
-        </div>
-
-        {task.mstTask?.description && (
-          <p className="text-sm text-muted-foreground mb-2">{task.mstTask.description}</p>
-        )}
-
-        {task.notes && (
-          <div className="flex items-start gap-2 text-sm text-muted-foreground mb-2">
-            <span className="shrink-0">📝</span>
-            <p>{task.notes}</p>
-          </div>
-        )}
-
-        {task.store && (
-          <p className="text-xs text-muted-foreground">
-            Store: {task.store.storeName} ({task.store.storeCode})
-          </p>
-        )}
-
-        {task.pickedByUser && (
-          <p className="text-xs text-muted-foreground">
-            Picked by: {task.pickedByUser.firstName} {task.pickedByUser.lastName}
-          </p>
-        )}
-
-        {task.completedByUser && (
-          <p className="text-xs text-muted-foreground">
-            Completed by: {task.completedByUser.firstName} {task.completedByUser.lastName}
-          </p>
-        )}
       </button>
     )
   }
-
-  // Render task list
-  const renderTaskList = (
-    tasks: TaskExecution[],
-    isLoading: boolean,
-    error: string | null,
-    emptyMessage: string,
-  ) => {
-    if (isLoading) {
+  // ── Render Grid layout ────────────────────────────────────────────────────────
+  const renderGridLayout = () => {
+    if (isLoadingTasks) {
       return (
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
@@ -274,10 +450,48 @@ const MyTasks: React.FC = () => {
       )
     }
 
-    if (error) {
+    if (tasksError) {
       return (
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-          <p className="text-destructive text-sm">{error}</p>
+          <p className="text-destructive text-sm">{tasksError}</p>
+        </div>
+      )
+    }
+
+    if (filteredTasks.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">📋</div>
+          <p className="text-muted-foreground">
+            {selectedDate
+              ? 'No tasks found for the selected date.'
+              : 'No tasks scheduled for today at this store.'}
+          </p>
+        </div>
+      )
+    }
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 2xl:grid-cols-4 gap-4">
+        {sortedTasks.map(renderTaskCard)}
+      </div>
+    )
+  }
+
+  // ── Render Kanban layout ──────────────────────────────────────────────────────
+  const renderKanbanLayout = () => {
+    if (isLoadingTasks) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      )
+    }
+
+    if (tasksError) {
+      return (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+          <p className="text-destructive text-sm">{tasksError}</p>
         </div>
       )
     }
@@ -286,187 +500,267 @@ const MyTasks: React.FC = () => {
       return (
         <div className="text-center py-12">
           <div className="text-4xl mb-4">📋</div>
-          <p className="text-muted-foreground">{emptyMessage}</p>
+          <p className="text-muted-foreground">
+            {selectedDate
+              ? 'No tasks found for the selected date.'
+              : 'No tasks scheduled for today at this store.'}
+          </p>
+        </div>
+      )
+    }
+
+    // Group tasks by status
+    const tasksByStatus = KANBAN_COLUMNS.reduce<Record<TaskExecutionStatus, TaskExecution[]>>(
+      (acc, column) => {
+        acc[column.key] = statusFilter
+          ? sortedTasks.filter((t) => t.executionStatus === statusFilter)
+          : sortedTasks.filter((t) => t.executionStatus === column.key)
+        return acc
+      },
+      {} as Record<TaskExecutionStatus, TaskExecution[]>,
+    )
+
+    return (
+      <div className="overflow-x-auto pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
+        <div className="flex gap-4" style={{ minWidth: 'max-content', width: '100%' }}>
+          {KANBAN_COLUMNS.map((column) => {
+            const columnTasks = tasksByStatus[column.key]
+
+            return (
+              <div
+                key={column.key}
+                className={`flex-shrink-0 w-80 rounded-xl border ${column.columnStyle}`}
+              >
+                {/* Column header */}
+                <div className="flex items-center justify-between px-4 py-3 border-b border-gray-200/60 rounded-t-xl bg-white/80">
+                  <div className="flex items-center gap-2">
+                    <h4 className={`text-sm font-semibold ${column.headerTextClass}`}>
+                      {column.label}
+                    </h4>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${column.countChipClass}`}>
+                      {columnTasks.length}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Column body */}
+                <div className="p-3 space-y-3 min-h-[200px]">
+                  {columnTasks.map((task) => (
+                    <div
+                      key={task.taskExecutionId}
+                      className="rounded-lg border border-border bg-background p-3 hover:shadow-md transition-shadow cursor-pointer hover:border-primary/30"
+                      onClick={() => navigate(`/my-tasks/${task.taskExecutionId}`)}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <h5 className="text-sm font-medium truncate flex-1">
+                          {task.mstTask?.title || `Task #${task.mstTaskId}`}
+                        </h5>
+                      </div>
+                      {task.mstTask?.regionalText && (<div className="flex items-start justify-between gap-2 mb-2">
+                        <h5 className="text-sm text-muted-foreground truncate flex-1">
+                          {task.mstTask?.regionalText}
+                        </h5>
+                      </div>)}
+                      <div className="flex items-center gap-1.5 text-xs text-muted-foreground mb-2">
+                        <span>{formatDate(task.executionDate)}</span>
+                        <span>·</span>
+                        <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
+                      </div>
+
+                      <div className="flex items-center gap-1.5">
+                        <span className={`px-2 py-0.5 text-xs font-medium rounded-full ${column.colorClass}`}>
+                          {column.label}
+                        </span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {columnTasks.length === 0 && !statusFilter && (
+                    <div className="py-6 text-center text-sm text-muted-foreground">
+                      No {column.label.toLowerCase()} tasks
+                    </div>
+                  )}
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    )
+  }
+  // ── Render DataTable layout ───────────────────────────────────────────────────
+  const renderDataTableLayout = () => {
+    if (isLoadingTasks) {
+      return (
+        <div className="flex items-center justify-center py-12">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+        </div>
+      )
+    }
+
+    if (tasksError) {
+      return (
+        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+          <p className="text-destructive text-sm">{tasksError}</p>
+        </div>
+      )
+    }
+
+    if (filteredTasks.length === 0) {
+      return (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">📋</div>
+          <p className="text-muted-foreground">
+            {selectedDate
+              ? 'No tasks found for the selected date.'
+              : 'No tasks scheduled for today at this store.'}
+          </p>
         </div>
       )
     }
 
     return (
-      <div className="space-y-4">
-        {tasks.map(renderTaskCard)}
+      <div className="overflow-x-auto rounded-lg border border-border bg-background">
+        <table className="w-full text-sm min-w-[1000px]">
+          <thead>
+            <tr className="border-b border-border bg-muted/50">
+              <th className="text-left p-3 font-semibold text-foreground">Task</th>
+              <th className="text-left p-3 font-semibold text-foreground whitespace-nowrap">Date</th>
+              <th className="text-left p-3 font-semibold text-foreground whitespace-nowrap">Time</th>
+              <th className="text-left p-3 font-semibold text-foreground">Status</th>
+              <th className="text-left p-3 font-semibold text-foreground whitespace-nowrap">Picked By</th>
+              <th className="text-left p-3 font-semibold text-foreground whitespace-nowrap">Completed By</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-border">
+            {sortedTasks.map((task) => {
+              const status = task.executionStatus as TaskExecutionStatus
+              const statusColorClass = TASK_STATUS_COLORS[status]
+              const statusLabel = TASK_STATUS_LABELS[status]
+
+              return (
+                <tr
+                  key={task.taskExecutionId}
+                  className="hover:bg-muted/30 transition-colors cursor-pointer"
+                  onClick={() => navigate(`/my-tasks/${task.taskExecutionId}`)}
+                >
+                  <td className="p-3">
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                        {task.mstTask?.title || `Task #${task.mstTaskId}`}
+                      </span>
+                      {task.mstTask?.regionalText && (
+                        <span className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                          {task.mstTask.regionalText}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                  <td className="p-3 text-muted-foreground whitespace-nowrap">
+                    {formatDate(task.executionDate)}
+                  </td>
+                  <td className="p-3 text-muted-foreground whitespace-nowrap">
+                    {formatTime(task.fromTime)} - {formatTime(task.toTime)}
+                  </td>
+                  <td className="p-3 whitespace-nowrap">
+                    <span className={`inline-flex px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
+                      {statusLabel}
+                    </span>
+                  </td>
+                  <td className="p-3 text-muted-foreground whitespace-nowrap">
+                    {task.pickedByUser
+                      ? `${task.pickedByUser.firstName} ${task.pickedByUser.lastName}`
+                      : '—'}
+                  </td>
+                  <td className="p-3 text-muted-foreground whitespace-nowrap">
+                    {task.completedByUser
+                      ? `${task.completedByUser.firstName} ${task.completedByUser.lastName}`
+                      : '—'}
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
     )
   }
-
-  // Render status summary (counts per status) — clickable to filter the list
-  const renderStatusSummary = (tasks: TaskExecution[]) => {
-    if (tasks.length === 0) return null
-    const statusCounts = ALL_TASK_STATUSES.reduce<Record<TaskExecutionStatus, number>>(
-      (acc, status) => {
-        acc[status] = tasks.filter((t) => t.executionStatus === status).length
-        return acc
-      },
-      {} as Record<TaskExecutionStatus, number>,
-    )
-    return (
-      <>
-        {statusFilter && (
-          <div className="flex justify-end mb-2">
-            <button
-              onClick={() => setStatusFilter(null)}
-              className="inline-flex items-center gap-1 text-xs font-medium text-primary hover:underline"
-            >
-              ← Show All
-            </button>
-          </div>
-        )}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 mb-4">
-          {ALL_TASK_STATUSES.map((status) => (
-            <button
-              key={status}
-              onClick={() => setStatusFilter(statusFilter === status ? null : status)}
-              className={`rounded-lg border p-3 text-center transition-colors ${TASK_STATUS_BOARD_COLORS[status]} ${
-                statusFilter === status ? 'ring-2 ring-primary' : 'hover:opacity-80'
-              }`}
-            >
-              <div className="text-2xl font-bold text-foreground">{statusCounts[status]}</div>
-              <div className="text-xs font-medium text-muted-foreground mt-0.5">
-                {TASK_STATUS_LABELS[status]}
-              </div>
-            </button>
-          ))}
-        </div>
-      </>
-    )
-  }
-
-  // Render tabs
-  const renderTabs = () => {
-    if (!selectedStoreId) return null
-
-    return (
-      <div className="bg-card border border-border rounded-lg shadow-sm">
-        {/* Tab bar */}
-        <div className="border-b border-border">
-          <div className="flex">
-            <button
-              onClick={() => { setActiveTab('today'); setStatusFilter(null) }}
-              className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'today'
-                ? 'text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-                }`}
-            >
-              <span className="flex items-center gap-2">
-                <span>📋</span>
-                Today's Tasks
-              </span>
-              {activeTab === 'today' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-            <button
-              onClick={() => { setActiveTab('historical'); setStatusFilter(null) }}
-              className={`px-6 py-3 text-sm font-medium transition-colors relative ${activeTab === 'historical'
-                ? 'text-primary'
-                : 'text-muted-foreground hover:text-foreground'
-                }`}
-            >
-              <span className="flex items-center gap-2">
-                <span>📜</span>
-                Task History
-              </span>
-              {activeTab === 'historical' && (
-                <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-primary" />
-              )}
-            </button>
-          </div>
-        </div>
-
-        {/* Tab content */}
-        <div className="p-6">
-          {activeTab === 'today' ? (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Today's Tasks</h3>
-                {todaysTasks.length > 0 && (
-                  <span className="text-sm text-muted-foreground">
-                    {todaysTasks.length} task{todaysTasks.length !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-              {renderStatusSummary(todaysTasks)}
-              <div className="mt-4">
-                {renderTaskList(
-                  statusFilter ? todaysTasks.filter((t) => t.executionStatus === statusFilter) : todaysTasks,
-                  isLoadingTodaysTasks,
-                  todaysTasksError,
-                  'No tasks scheduled for today at this store.',
-                )}
-              </div>
-            </div>
-          ) : (
-            <div>
-              <div className="flex items-center justify-between mb-4">
-                <h3 className="text-lg font-semibold">Task History</h3>
-                {historicalTasks.length > 0 && (
-                  <span className="text-sm text-muted-foreground">
-                    {historicalTasks.length} task{historicalTasks.length !== 1 ? 's' : ''}
-                  </span>
-                )}
-              </div>
-
-              {/* Date picker */}
-              <div className="mb-6 flex justify-end">
-                <div className="flex items-center gap-3">
-                  <label
-                    htmlFor="history-date"
-                    className="text-sm font-medium text-foreground whitespace-nowrap"
-                  >
-                    Select Date
-                  </label>
-                  <input
-                    id="history-date"
-                    type="date"
-                    value={selectedDate}
-                    onChange={(e) => setSelectedDate(e.target.value)}
-                    className="p-2 border border-border rounded-lg bg-background text-foreground focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-                  />
-                </div>
-              </div>
-
-              {selectedDate ? (
-                <>
-                  {renderStatusSummary(historicalTasks)}
-                  <div className="mt-4">
-                    {renderTaskList(
-                      statusFilter ? historicalTasks.filter((t) => t.executionStatus === statusFilter) : historicalTasks,
-                      isLoadingHistoricalTasks,
-                      historicalTasksError,
-                      'No tasks found for the selected date.',
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="text-center py-12">
-                  <div className="text-4xl mb-4">📅</div>
-                  <p className="text-muted-foreground">Select a date to view historical tasks.</p>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-    )
-  }
-
+  // ── Main render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">My Tasks</h1>
-        <p className="text-muted-foreground mt-2">View and manage your assigned tasks</p>
-      </div>
-      {renderStoreSelector()}
-      {renderTabs()}
+      {/* Page header (with view-switcher actions) */}
+      <PageHeader
+        title="My Tasks"
+        subtitle="View and manage your assigned tasks"
+        actions={renderViewSwitcher()}
+      />
+
+      {/* Filters: Store + Date */}
+      {renderFilters()}
+
+      {/* Status summary — common across all layouts */}
+      {selectedStoreId && !isLoadingTasks && tasks.length > 0 && (
+        <div className='space-y-3'>
+          <div className="flex items-center justify-between gap-2">
+            <h2 className="text-sm font-semibold uppercase tracking-wider text-muted-foreground">
+              Summary
+            </h2>
+            <div className="flex items-center gap-2">
+              <span className="rounded-full bg-primary/10 px-3 py-1 text-xs font-semibold text-primary">
+                {tasks.length} task{tasks.length !== 1 ? 's' : ''} total
+              </span>
+              {statusFilter && (
+                <button
+                  onClick={() => setStatusFilter(null)}
+                  className="inline-flex cursor-pointer items-center gap-1 text-xs font-medium text-primary hover:underline"
+                >
+                  ← Show All
+                </button>
+              )}
+            </div>
+          </div>
+          {renderStatusSummary()}
+        </div>
+      )}
+
+      {/* Content area — only render when store is selected */}
+      {selectedStoreId && (
+        <div className="rounded-2xl border border-border bg-card shadow-sm">
+          {/* Toolbar: title + count — responsive (wraps on mobile) */}
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b border-border p-4">
+            <h2 className="text-base font-semibold text-foreground">
+              {selectedDate ? `Tasks for ${formatDate(selectedDate)}` : "Today's Tasks"}
+              {tasks.length > 0 && (
+                <span className="ml-2 text-sm font-normal text-muted-foreground">
+                  ({filteredTasks.length} {filteredTasks.length === 1 ? 'task' : 'tasks'}
+                  {statusFilter ? ' · filtered' : ''})
+                </span>
+              )}
+            </h2>
+            {selectedStore && (
+              <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+                <StoreIcon className="h-3.5 w-3.5 text-primary" />
+                {`Store: ${selectedStore.store.storeName}`}
+              </span>
+            )}
+          </div>
+
+          {/* Layout content */}
+          <div className="min-w-0 p-4">
+            {viewMode === 'grid' && renderGridLayout()}
+            {viewMode === 'kanban' && renderKanbanLayout()}
+            {viewMode === 'table' && renderDataTableLayout()}
+          </div>
+        </div>
+      )}
+
+      {/* Empty state when no store selected */}
+      {!selectedStoreId && !isLoadingStores && stores.length > 0 && (
+        <div className="text-center py-12">
+          <div className="text-4xl mb-4">🏪</div>
+          <p className="text-muted-foreground">Select a store to view your tasks.</p>
+        </div>
+      )}
     </div>
   )
 }

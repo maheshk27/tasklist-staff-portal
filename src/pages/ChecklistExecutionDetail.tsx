@@ -265,13 +265,6 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <button
-          onClick={goBack}
-          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-        >
-          <ChevronLeft className="h-4 w-4" />
-          Back to Task
-        </button>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -308,39 +301,25 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   return (
     <div className="space-y-6">
       {/* Page header (back only) */}
-      {/* <button
+      <button
         onClick={goBack}
         className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
       >
         <ChevronLeft className="h-4 w-4" />
         Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
-      </button> */}
+      </button>
       <PageHeader
         title="Checklist Execution"
         subtitle="View and manage your assigned checklist"
-        actions={
-          <button
-            onClick={goBack}
-            className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
-          </button>
-        }
       />
 
       {/* ==== Checklist Info Card ==== */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
         <div className="p-4">
-          {/* Title + status badge */}
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-xl font-bold text-foreground">
-              {checklistExecution.taskChecklist?.title || `Checklist #${checklistExecution.mstChecklistId}`}
-            </h1>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${checklistStatusColor}`}>
-              {checklistStatusLabel}
-            </span>
-          </div>
+          {/* Title */}
+          <h1 className="text-lg font-medium text-foreground">
+            {checklistExecution.taskChecklist?.title || `Checklist #${checklistExecution.mstChecklistId}`}
+          </h1>
 
           {/* Regional text */}
           {checklistExecution.taskChecklist?.regionalText && (
@@ -382,6 +361,9 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
           {/* Badges — mandatory, priority, status */}
           <div className="mt-3 flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${checklistStatusColor}`}>
+              {checklistStatusLabel}
+            </span>
             {checklistExecution.taskChecklist?.isMandatory && (
               <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50">
                 <ShieldCheck className="h-3.5 w-3.5" />

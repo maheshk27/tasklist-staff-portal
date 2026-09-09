@@ -175,18 +175,16 @@ const CreateTicket: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      <button
+        onClick={() => navigate('/tickets')}
+        className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Tickets
+      </button>
       <PageHeader
         title="Create New Ticket"
         subtitle="Submit a new support ticket"
-        actions={
-          <button
-            onClick={() => navigate('/tickets')}
-            className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
-          >
-            <ArrowLeft className="h-4 w-4" />
-            Back to Tickets
-          </button>
-        }
       />
 
       <form onSubmit={handleSubmit} className="bg-card border border-border rounded-xl shadow-sm space-y-5">

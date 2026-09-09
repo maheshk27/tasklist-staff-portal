@@ -231,9 +231,6 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
   if (isLoadingTask) {
     return (
       <div className="space-y-6">
-        <button onClick={goBack} className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1">
-          ← Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
-        </button>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -620,7 +617,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
         <div className="p-4">
           {/* Title + status badge */}
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <h1 className="text-xl font-bold text-foreground">
+            <h1 className="text-lg font-medium text-foreground">
               {taskExecution.mstTask?.title || `Task #${taskExecution.mstTaskId}`}
             </h1>
             <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColorClass}`}>

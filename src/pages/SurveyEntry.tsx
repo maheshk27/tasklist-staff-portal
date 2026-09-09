@@ -285,7 +285,7 @@ const SurveyEntryPage: React.FC = () => {
 
           {/* Submission Metadata */}
           {(submissionDetails.submittedBy || submissionDetails.verifiedBy || submissionDetails.surveyDate) && (
-            <div className="mt-4 pt-4 border-t border-border grid grid-cols-2 sm:grid-cols-3 gap-4 text-sm">
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-4 text-sm">
               {submissionDetails?.surveyDays && submissionDetails.surveyDays.length > 0 && (
                 <div>
                   <span className="text-muted-foreground">Survey Days:</span>

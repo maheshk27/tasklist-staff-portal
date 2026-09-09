@@ -1,10 +1,76 @@
-import React from 'react'
+import React, { useState, useEffect, useCallback } from 'react'
 import toast from 'react-hot-toast'
 import { useNotifications } from '../hooks/useNotifications'
 import { PageHeader } from '../components/PageHeader'
+import { Download, Check, Smartphone } from 'lucide-react'
+
+interface BeforeInstallPromptEvent extends Event {
+  readonly platforms: string[]
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>
+  prompt(): Promise<void>
+}
+
+declare global {
+  interface WindowEventMap {
+    beforeinstallprompt: BeforeInstallPromptEvent
+  }
+}
 
 const Settings: React.FC = () => {
   const { token, permission, messagingSupported, requestPermission, getFCMToken, disableNotifications } = useNotifications()
+
+  // PWA Install state
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null)
+  const [isPwaInstalled, setIsPwaInstalled] = useState(false)
+  const [isInstalling, setIsInstalling] = useState(false)
+
+  useEffect(() => {
+    // Check if already installed
+    const checkInstalled = () => {
+      const isStandalone = window.matchMedia('(display-mode: standalone)').matches
+      const isStandaloneNavigator = (window.navigator as unknown as { standalone?: boolean }).standalone
+      setIsPwaInstalled(isStandalone || isStandaloneNavigator === true)
+    }
+    checkInstalled()
+
+    // Listen for beforeinstallprompt event
+    const handler = (e: BeforeInstallPromptEvent) => {
+      e.preventDefault()
+      setDeferredPrompt(e)
+    }
+    window.addEventListener('beforeinstallprompt', handler)
+
+    // Listen for app installed event
+    const handleAppInstalled = () => {
+      setIsPwaInstalled(true)
+      setDeferredPrompt(null)
+      toast.success('App installed successfully!')
+    }
+    window.addEventListener('appinstalled', handleAppInstalled)
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler)
+      window.removeEventListener('appinstalled', handleAppInstalled)
+    }
+  }, [])
+
+  const handleInstallPwa = useCallback(async () => {
+    if (!deferredPrompt) return
+
+    setIsInstalling(true)
+    try {
+      deferredPrompt.prompt()
+      const { outcome } = await deferredPrompt.userChoice
+      if (outcome === 'accepted') {
+        toast.success('Installing app...')
+      }
+      setDeferredPrompt(null)
+    } catch {
+      toast.error('Failed to install app')
+    } finally {
+      setIsInstalling(false)
+    }
+  }, [deferredPrompt])
 
   const handleEnableNotifications = async () => {
     try {
@@ -155,6 +221,58 @@ const Settings: React.FC = () => {
             </div>
           </div>
         )}
+      </div>
+
+      {/* PWA Install Section */}
+      <div className="bg-card border border-border rounded-lg p-6 shadow-sm">
+        <h2 className="text-xl font-semibold mb-4">App Installation</h2>
+
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex items-center gap-3">
+              <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${isPwaInstalled ? 'bg-green-100' : 'bg-orange-100'}`}>
+                <Smartphone className={`h-5 w-5 ${isPwaInstalled ? 'text-green-600' : 'text-orange-600'}`} />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-foreground">Install App</p>
+                <p className="text-xs text-muted-foreground">
+                  {isPwaInstalled ? 'App is installed on your device' : 'Add to home screen for quick access'}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {isPwaInstalled ? (
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                  <Check className="h-4 w-4" />
+                  Installed
+                </div>
+              ) : (
+                <button
+                  onClick={handleInstallPwa}
+                  disabled={isInstalling || !deferredPrompt}
+                  className="flex items-center justify-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap w-full sm:w-auto"
+                >
+                  <Download className="h-4 w-4 flex-shrink-0" />
+                  <span>{isInstalling ? 'Installing...' : 'Install App'}</span>
+                </button>
+              )}
+            </div>
+          </div>
+
+          {!isPwaInstalled && !deferredPrompt && (
+            <p className="text-xs text-muted-foreground bg-muted p-3 rounded-lg">
+              To install the app, use Chrome, Edge, or Safari on your device. Look for the "Add to Home Screen" option in your browser menu.
+            </p>
+          )}
+
+          <div className="text-sm text-muted-foreground">
+            <p>
+              Installing the app gives you a native app experience with quick access from your home screen,
+              offline capabilities, and push notifications.
+            </p>
+          </div>
+        </div>
       </div>
     </div>
   )

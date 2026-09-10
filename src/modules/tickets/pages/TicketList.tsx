@@ -226,7 +226,7 @@ const TicketList: React.FC = () => {
             <span className="text-xs font-medium text-primary truncate">{ticket.ticketNumber}</span>
             {breached && <span className="px-1 py-0.5 text-[10px] rounded bg-red-100 text-red-800 shrink-0">SLA</span>}
           </div>
-          <p className="text-sm font-medium text-foreground line-clamp-2 mb-2">{ticket.ticketList?.ticketTitle}</p>
+          <p className="text-sm font-semibold text-foreground line-clamp-2 truncate mb-2">{ticket.ticketList?.ticketTitle}</p>
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             {ticket.store && <span className="truncate">{ticket.store.storeName}</span>}
             {ticket.ticketList?.ticketPriority?.name && <span className="shrink-0 ml-2">{ticket.ticketList.ticketPriority.name}</span>}
@@ -259,8 +259,7 @@ const TicketList: React.FC = () => {
               </svg>
             </div>
           </div>
-          <div className="font-medium text-foreground text-sm">{ticket.ticketList?.ticketTitle}</div>
-          {/* {ticket.description && <p className="text-sm text-muted-foreground mb-3 line-clamp-3">{ticket.description}</p>} */}
+          <div className="text-sm font-semibold text-foreground line-clamp-2 truncate">{ticket.ticketList?.ticketTitle}</div>
           {ticket.store && (
             <div className="flex items-center gap-1.5 text-sm">
               <span className="text-muted-foreground text-xs">Store:</span>

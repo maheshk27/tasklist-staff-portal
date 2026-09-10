@@ -26,7 +26,7 @@ const ChecklistCard: React.FC<ChecklistCardProps> = ({ checklist: cl, onClick, c
   const title = cl.taskChecklist?.title || `Checklist #${cl.mstChecklistId}`
 
   const priorityChip = cl.taskChecklist?.priority && (
-    <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${getPriorityColor(cl.taskChecklist.priority)}`}>
+    <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getPriorityColor(cl.taskChecklist.priority)}`}>
       {priorityLabel}
     </span>
   )
@@ -40,7 +40,7 @@ const ChecklistCard: React.FC<ChecklistCardProps> = ({ checklist: cl, onClick, c
   const footer = (
     <div className="flex items-start justify-between gap-2">
       <div className="flex flex-wrap items-center gap-2">
-        <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
+        <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${statusColorClass}`}>
           {statusLabel}
         </span>
         {priorityChip}

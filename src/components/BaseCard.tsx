@@ -103,7 +103,7 @@ export const StatusChip: React.FC<{ label: string; colorClass: string; size?: 's
   colorClass,
   size = 'md',
 }) => (
-  <span className={`px-2.5 py-0.5 ${size === 'sm' ? 'text-xs' : 'text-sm'} font-medium rounded-full ${colorClass}`}>
+  <span className={`px-2.5 py-1 ${size === 'sm' ? 'text-xs' : 'text-sm'} font-medium rounded-full ${colorClass}`}>
     {label}
   </span>
 )

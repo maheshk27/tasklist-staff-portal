@@ -63,6 +63,8 @@ const TeamTasks: React.FC = () => {
   const [isLoadingTasks, setIsLoadingTasks] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
 
+  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
+  
   // ── Check user role - only AREA MANAGER / BRANCH MANAGER / GM can access ─────
   useEffect(() => {
     if (!user || (user.role?.roleName?.toUpperCase() !== 'AREA MANAGER (AM)'
@@ -359,7 +361,16 @@ const TeamTasks: React.FC = () => {
                 name="selectedDate"
                 type="date"
                 value={selectedDate}
-                onChange={(e) => handleDateChange(e.target.value)}
+                // onChange={(e) => handleDateChange(e.target.value)}
+                onChange={(e) => {
+                    // Do not allow future dates
+                    const selected = e.target.value
+                    if (selected && selected > today) {
+                      return
+                    }
+                    handleDateChange(selected)
+                  }}
+                max={today}
               />
 
               <FormSelect

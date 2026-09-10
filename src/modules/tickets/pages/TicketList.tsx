@@ -81,6 +81,8 @@ const TicketList: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
 
+  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
+
   // Stores
   const [stores, setStores] = useState<StoreWithMapping[]>([])
   const [selectedStoreId, setSelectedStoreId] = useState<number | null>(null)
@@ -386,14 +388,33 @@ const TicketList: React.FC = () => {
               name="dateFrom"
               type="date"
               value={dateFrom}
-              onChange={(e) => setDateFrom(e.target.value)}
+              // onChange={(e) => setDateFrom(e.target.value)}
+              onChange={(e) => {
+                // Do not allow future dates
+                const selected = e.target.value
+                if (selected && selected > today) {
+                  return
+                }
+                setDateFrom(selected)
+              }}
+              max={today}
+
             />
             <FormField
               label="To Date"
               name="dateTo"
               type="date"
               value={dateTo}
-              onChange={(e) => setDateTo(e.target.value)}
+              // onChange={(e) => setDateTo(e.target.value)}
+              onChange={(e) => {
+                // Do not allow future dates
+                const selected = e.target.value
+                if (selected && selected > today) {
+                  return
+                }
+                setDateTo(selected)
+              }}
+              max={today}
             />
           </div>
         )}

@@ -13,6 +13,8 @@ interface FormFieldProps {
   showPasswordToggle?: boolean
   minLength?: number
   maxLength?: number
+  max?: string
+  min?: string
   icon?: React.ReactNode
   rows?: number
   className?: string
@@ -31,6 +33,8 @@ const FormField: React.FC<FormFieldProps> = ({
   showPasswordToggle = false,
   minLength,
   maxLength,
+  max,
+  min,
   icon,
   rows,
   className = ''
@@ -89,6 +93,8 @@ const FormField: React.FC<FormFieldProps> = ({
             required={required}
             minLength={minLength}
             maxLength={maxLength}
+            max={max}
+            min={min}
           />
         }
         {shouldShowPasswordToggle && (

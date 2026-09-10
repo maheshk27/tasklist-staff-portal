@@ -21,6 +21,7 @@ import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
 import SurveyList from './pages/SurveyList'
 import SurveyEntryPage from './pages/SurveyEntry'
 import LoginLogs from './pages/LoginLogs'
+import NotFound from './pages/NotFound'
 
 // Scroll to top on route change
 const ScrollToTop: React.FC = () => {
@@ -132,6 +133,9 @@ function App() {
             <Layout><EditTicket /></Layout>
           </ProtectedRoute>
         } />
+
+        {/* 404 - Catch all unmatched routes */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster
         position="top-right"

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { StoreIcon, MapPin } from 'lucide-react'
+import { StoreIcon, MapPin, Eye, PlayCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { onboardingService, taskService } from '../services/apiManager'
 import type { StoreWithMapping } from '../types/user-store'
@@ -10,10 +10,15 @@ import PageHeader from '../components/PageHeader'
 import FilterSection from '../components/FilterSection'
 import FormSelect from '../components/ui/FormSelect'
 import FormField from '../components/ui/FormField'
+import { canStartSurvey } from '../utils/surveyPermission'
 
 const SurveyList: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  // Permission: only BM/ABM/ABM(OTL)/STL/OTL roles can start surveys.
+  // Others can only view surveys.
+  const userCanStartSurvey = canStartSurvey(user?.role?.roleName)
 
   // Stores
   const [stores, setStores] = useState<StoreWithMapping[]>([])
@@ -177,7 +182,7 @@ const SurveyList: React.FC = () => {
             <p className="py-4 text-muted-foreground text-sm">No active stores assigned to you.</p>
           ) : (
             <>
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
                 <FormSelect
                   label="Store"
                   name="selectedStoreId"
@@ -195,7 +200,15 @@ const SurveyList: React.FC = () => {
                   name="surveyDate"
                   type="date"
                   value={surveyDate}
-                  onChange={(e) => setSurveyDate(e.target.value)}
+                  onChange={(e) => {
+                    // Do not allow future dates
+                    const selected = e.target.value
+                    if (selected && selected > today) {
+                      return
+                    }
+                    setSurveyDate(selected)
+                  }}
+                  max={today}
                 />
               </div>
 
@@ -287,20 +300,33 @@ const SurveyList: React.FC = () => {
                 )}
               </div>
 
-              <div>
+              <div className="">
                 {!survey.dailySurveyId ? (
-                  <button
-                    onClick={() => handleStartSurvey(survey)}
-                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
-                  >
-                    Start Survey
-                  </button>
+                  userCanStartSurvey ? (
+                    <button
+                      onClick={() => handleStartSurvey(survey)}
+                      className="mt-6 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                    >
+                      <PlayCircle className="h-4 w-4" />
+                      Start Survey
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="mt-6 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium cursor-not-allowed"
+                      title="Only BM, ABM, ABM(OTL), STL and OTL roles can start surveys"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View Only
+                    </button>
+                  )
                 ) : (
                   <button
                     onClick={() => handleContinueSurvey(survey.dailySurveyId!)}
-                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                   >
-                    Continue Survey
+                    <Eye className="h-4 w-4" />
+                    {userCanStartSurvey ? 'Continue Survey' : 'View Survey'}
                   </button>
                 )}
               </div>

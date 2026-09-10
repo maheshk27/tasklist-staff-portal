@@ -56,6 +56,8 @@ const MyTasks: React.FC = () => {
   const [isLoadingTasks, setIsLoadingTasks] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
 
+  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
+  
   // ── Fetch assigned stores on mount ───────────────────────────────────────────
   useEffect(() => {
     let cancelled = false
@@ -273,7 +275,16 @@ const MyTasks: React.FC = () => {
                 name="selectedDate"
                 type="date"
                 value={selectedDate}
-                onChange={(e) => handleDateChange(e.target.value)}
+                // onChange={(e) => handleDateChange(e.target.value)}
+                onChange={(e) => {
+                    // Do not allow future dates
+                    const selected = e.target.value
+                    if (selected && selected > today) {
+                      return
+                    }
+                    handleDateChange(selected)
+                  }}
+                max={today}
               />
               <FormSelect
                 label="Sort By"

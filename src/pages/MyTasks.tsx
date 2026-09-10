@@ -7,11 +7,6 @@ import {
   StoreIcon,
   MapPin,
   X,
-  Clock,
-  Activity,
-  CheckCircle2,
-  AlertTriangle,
-  type LucideIcon,
 } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { onboardingService, taskService } from '../services/apiManager'
@@ -20,81 +15,18 @@ import FilterSection from '../components/FilterSection'
 import FormSelect from '../components/ui/FormSelect'
 import FormField from '../components/ui/FormField'
 import TaskCard from '../components/TaskCard'
+import StatusSummaryCard, { TASK_STATUS_ICONS } from '../components/StatusSummaryCard'
 import type { StoreWithMapping } from '../types/user-store'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import {
   TASK_STATUS_COLORS,
   TASK_STATUS_LABELS,
   ALL_TASK_STATUSES,
+  KANBAN_COLUMNS,
 } from '../types/task-execution'
 import { formatDate, formatTime } from '../utils/date'
 
 type ViewMode = 'grid' | 'kanban' | 'table'
-
-// ── Kanban column configuration ────────────────────────────────────────────────
-interface KanbanColumn {
-  key: TaskExecutionStatus
-  label: string
-  colorClass: string
-  headerTextClass: string
-  countChipClass: string
-  columnStyle: string
-}
-
-const KANBAN_COLUMNS: KanbanColumn[] = [
-  {
-    key: 'NOT_STARTED',
-    label: 'Not Started',
-    colorClass: 'bg-gray-100 text-gray-800',
-    headerTextClass: 'text-gray-800',
-    countChipClass: 'bg-gray-100 text-gray-700',
-    columnStyle: 'border-gray-200 bg-gray-50/50',
-  },
-  {
-    key: 'IN_PROGRESS',
-    label: 'In Progress',
-    colorClass: 'bg-blue-100 text-blue-800',
-    headerTextClass: 'text-blue-800',
-    countChipClass: 'bg-blue-100 text-blue-700',
-    columnStyle: 'border-blue-200 bg-blue-50/50',
-  },
-  {
-    key: 'COMPLETED',
-    label: 'Completed',
-    colorClass: 'bg-green-100 text-green-800',
-    headerTextClass: 'text-green-800',
-    countChipClass: 'bg-green-100 text-green-700',
-    columnStyle: 'border-green-200 bg-green-50/50',
-  },
-  /* {
-    key: 'SKIPPED',
-    label: 'Skipped',
-    colorClass: 'bg-yellow-100 text-yellow-800',
-    headerTextClass: 'text-yellow-800',
-    countChipClass: 'bg-yellow-100 text-yellow-700',
-    columnStyle: 'border-yellow-200 bg-yellow-50/50',
-  }, */
-  {
-    key: 'OVERDUE',
-    label: 'Overdue',
-    colorClass: 'bg-red-100 text-red-800',
-    headerTextClass: 'text-red-800',
-    countChipClass: 'bg-red-100 text-red-700',
-    columnStyle: 'border-red-200 bg-red-50/50',
-  },
-]
-
-// ── Theme-aware status summary cards ───────────────────────────────────────────
-// Staff portal themes via .dark CSS tokens (no dark: variants), so summary
-// cards use neutral theme tokens (bg-card / border-border) and keep the status
-// identity through a colored icon + label. 500-level tones stay visible on light & dark.
-const STATUS_SUMMARY_ICONS: Record<TaskExecutionStatus, { icon: LucideIcon; dot: string }> = {
-  NOT_STARTED: { icon: Clock, dot: 'bg-gray-500' },
-  IN_PROGRESS: { icon: Activity, dot: 'bg-blue-500' },
-  COMPLETED: { icon: CheckCircle2, dot: 'bg-green-500' },
-  SKIPPED: { icon: AlertTriangle, dot: 'bg-yellow-500' },
-  OVERDUE: { icon: AlertTriangle, dot: 'bg-red-500' },
-}
 
 const MyTasks: React.FC = () => {
   const { user } = useAuth()
@@ -244,31 +176,20 @@ const MyTasks: React.FC = () => {
     )
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
         {ALL_TASK_STATUSES.map((status) => {
-          const { icon: Icon, dot } = STATUS_SUMMARY_ICONS[status]
-          const isActive = statusFilter === status
+          const { icon: Icon, dot } = TASK_STATUS_ICONS[status]
           return (
-            <button
+            <StatusSummaryCard
               key={status}
-              onClick={() => setStatusFilter(isActive ? null : status)}
-              className={`rounded-2xl border border-border bg-card p-4 text-center shadow-sm transition-all ${
-                isActive ? 'ring-2 ring-primary' : 'hover:opacity-80 hover:shadow-md'
-              }`}
-            >
-              <div className="flex items-center justify-between gap-2 mb-2">
-                <div className="flex items-center gap-2 min-w-0">
-                  <span className={`h-2.5 w-2.5 shrink-0 rounded-full ${dot}`} />
-                  <span className="text-xs font-medium text-muted-foreground truncate">
-                    {TASK_STATUS_LABELS[status]}
-                  </span>
-                </div>
-                <Icon className="h-5 w-5 shrink-0 text-muted-foreground" />
-              </div>
-              <div className="text-2xl font-extrabold text-foreground">
-                {statusCounts[status]}
-              </div>
-            </button>
+              status={status}
+              count={statusCounts[status]}
+              label={TASK_STATUS_LABELS[status]}
+              icon={Icon}
+              dotColor={dot}
+              isActive={statusFilter === status}
+              onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+            />
           )
         })}
       </div>
@@ -561,7 +482,7 @@ const MyTasks: React.FC = () => {
     }
 
     return (
-      <div className="overflow-x-auto rounded-lg border border-border bg-background">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm min-w-[1000px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
@@ -590,11 +511,9 @@ const MyTasks: React.FC = () => {
                       <span className="font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
                         {task.mstTask?.title || `Task #${task.mstTaskId}`}
                       </span>
-                      {task.mstTask?.regionalText && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
-                          {task.mstTask.regionalText}
-                        </span>
-                      )}
+                      <span className="text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                        {task.mstTask?.regionalText ? task.mstTask?.regionalText : 'Not Available'}
+                      </span>
                     </div>
                   </td>
                   <td className="p-3 text-muted-foreground whitespace-nowrap">

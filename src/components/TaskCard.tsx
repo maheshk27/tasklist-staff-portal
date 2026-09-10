@@ -1,7 +1,7 @@
 import React from 'react'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
-import { formatDate, formatTime } from '../utils/date'
+import BaseCard, { ArrowButton, StatusChip, InfoRow } from './BaseCard'
 
 export interface TaskCardProps {
   task: TaskExecution
@@ -15,8 +15,7 @@ export interface TaskCardProps {
 
 /**
  * TaskCard — shared task-execution card used across staff-portal pages
- * (My Tasks grid + kanban layouts). The `compact` variant is trimmed for
- * board columns; the full variant shows the complete task summary.
+ * (My Tasks grid + kanban layouts). Uses BaseCard for common layout.
  * Pass `showAssignment` to also display the assigned store & user.
  */
 const TaskCard: React.FC<TaskCardProps> = ({
@@ -31,114 +30,62 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const statusLabel = TASK_STATUS_LABELS[status] || task.executionStatus
   const title = task.mstTask?.title || `Task #${task.mstTaskId}`
 
-  if (compact) {
-    return (
-      <button
-        onClick={() => onClick(task)}
-        className={`w-full cursor-pointer text-left border border-border rounded-lg p-3 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group ${className}`}
-      >
-        <div className="space-y-2">
-          {/* Title */}
-          <h5 className="text-sm font-medium text-foreground truncate">{title}</h5>
+  const footer = (
+    <div className="flex items-start justify-between gap-2">
+      <StatusChip label={statusLabel} colorClass={statusColorClass} size="sm" />
+      <ArrowButton />
+    </div>
+  )
 
-          {/* Regional text */}
-          {task.mstTask?.regionalText && (
-            <p className="text-xs text-muted-foreground truncate">{task.mstTask.regionalText}</p>
-          )}
+  const assignmentDetails = showAssignment && (
+    <>
+      {task.store && (
+        <InfoRow
+          label="Store"
+          value={`${task.store.storeName} (${task.store.storeCode})`}
+        />
+      )}
+      {task.user && (
+        <InfoRow
+          label="Assigned To"
+          value={`${task.user.firstName} ${task.user.lastName}`}
+        />
+      )}
+    </>
+  )
 
-          {/* Schedule */}
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-            <span>{formatDate(task.executionDate)}</span>
-            <span>·</span>
-            <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
-          </div>
-
-          {/* Assigned store / user (team views) */}
-          {showAssignment && (
-            <>
-              {task.store && (
-                <p className="text-[11px] text-muted-foreground truncate">
-                  Store: {task.store.storeName} ({task.store.storeCode})
-                </p>
-              )}
-              {task.user && (
-                <p className="text-[11px] text-muted-foreground truncate">
-                  Assigned to: {task.user.firstName} {task.user.lastName}
-                </p>
-              )}
-            </>
-          )}
-
-          {/* Status chip */}
-          <span className={`inline-flex px-2 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
-            {statusLabel}
-          </span>
-        </div>
-      </button>
-    )
-  }
+  const extraDetails = !compact && (
+    <>
+      {assignmentDetails}
+      {task.pickedByUser && (
+        <InfoRow
+          label="Picked By"
+          value={`${task.pickedByUser.firstName} ${task.pickedByUser.lastName}`}
+        />
+      )}
+      {task.completedByUser && (
+        <InfoRow
+          label="Completed By"
+          value={`${task.completedByUser.firstName} ${task.completedByUser.lastName}`}
+        />
+      )}
+    </>
+  )
 
   return (
-    <button
+    <BaseCard
+      title={title}
+      regionalText={task.mstTask?.regionalText}
+      scheduleDate={task.executionDate}
+      fromTime={task.fromTime}
+      toTime={task.toTime}
+      compact={compact}
       onClick={() => onClick(task)}
-      className={`w-full cursor-pointer text-left border border-border rounded-lg p-3 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group ${className}`}
+      className={className}
+      footer={footer}
     >
-      <div className="space-y-2">
-        {/* Title — left aligned */}
-        <h3 className="font-medium text-foreground truncate">{title}</h3>
-
-        {/* Regional text — left aligned */}
-        {task.mstTask?.regionalText && (
-          <p className="text-sm text-muted-foreground truncate">{task.mstTask.regionalText}</p>
-        )}
-
-        {/* Schedule — left aligned */}
-        <div className="flex items-start gap-2 text-sm text-muted-foreground">
-          <span>{formatDate(task.executionDate)}</span>
-          <span>{formatTime(task.fromTime)} - {formatTime(task.toTime)}</span>
-        </div>
-
-        {/* Assigned store / user (team views) */}
-        {showAssignment && (
-          <>
-            {task.store && (
-              <p className="text-xs text-muted-foreground">
-                Store: {task.store.storeName} ({task.store.storeCode})
-              </p>
-            )}
-            {task.user && (
-              <p className="text-xs text-muted-foreground">
-                Assigned to: {task.user.firstName} {task.user.lastName}
-              </p>
-            )}
-          </>
-        )}
-
-        {/* Picked by — left aligned */}
-        {task.pickedByUser && (
-          <p className="text-xs text-muted-foreground">
-            Picked By: {task.pickedByUser.firstName} {task.pickedByUser.lastName}
-          </p>
-        )}
-
-        {/* Completed by — left aligned */}
-        {task.completedByUser && (
-          <p className="text-xs text-muted-foreground">
-            Completed By: {task.completedByUser.firstName} {task.completedByUser.lastName}
-          </p>
-        )}
-
-        {/* Status + chevron — items-start, left aligned */}
-        <div className="flex items-start justify-between gap-2">
-          <span className={`px-2.5 py-0.5 text-xs font-medium rounded-full ${statusColorClass}`}>
-            {statusLabel}
-          </span>
-          <svg className="w-4 h-4 shrink-0 text-muted-foreground group-hover:text-primary transition-colors" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-          </svg>
-        </div>
-      </div>
-    </button>
+      {extraDetails}
+    </BaseCard>
   )
 }
 

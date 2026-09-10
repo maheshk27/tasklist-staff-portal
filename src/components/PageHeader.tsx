@@ -34,7 +34,7 @@ export const PageHeader: React.FC<PageHeaderProps> = ({
     <div className={`flex flex-wrap justify-between items-center gap-4 mb-8 ${className}`}>
       <div className="min-w-0">
         <h1 className="text-2xl font-bold tracking-tight">{title}</h1>
-        {subtitle && <p className=" mt-1 text-md text-muted-foreground sm:text-base">{subtitle}</p>}
+        {subtitle && <p className=" text-md text-muted-foreground sm:text-base">{subtitle}</p>}
       </div>
       {actions && <div className="shrink-0">{actions}</div>}
     </div>

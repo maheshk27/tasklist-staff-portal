@@ -5,7 +5,7 @@ import { LayoutGrid, SquareKanban, Table2, StoreIcon, MapPin, Clock, Hourglass, 
 import { taskService } from '../services/apiManager'
 import { decodeToken, getStoredTokens } from '../utils/auth'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
-import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
+import { KANBAN_COLUMNS, TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
 import type { TaskChecklistExecution, ChecklistStatus } from '../types/task-checklist-execution'
 import {
   CHECKLIST_STATUS_COLORS,
@@ -15,66 +15,11 @@ import {
 import { ActionButton } from '../components/ui/ActionButton'
 import PageHeader from '../components/PageHeader'
 import ChecklistCard from '../components/ChecklistCard'
+import StatusSummaryCard, { CHECKLIST_STATUS_ICONS } from '../components/StatusSummaryCard'
 import { getPriorityColor } from '../utils/priority'
 import { formatDate, formatDateTime, formatTime, isTimeToStart } from '../utils/date'
 
 type ViewMode = 'grid' | 'kanban' | 'table'
-
-// ── Checklist kanban column configuration ──────────────────────────────────────
-interface ChecklistKanbanColumn {
-  key: ChecklistStatus
-  label: string
-  headerTextClass: string
-  countChipClass: string
-  columnStyle: string
-}
-
-const CHECKLIST_KANBAN_COLUMNS: ChecklistKanbanColumn[] = [
-  {
-    key: 'NOT_STARTED',
-    label: 'Not Started',
-    headerTextClass: 'text-gray-800',
-    countChipClass: 'bg-gray-100 text-gray-700',
-    columnStyle: 'border-gray-200 bg-gray-50/50',
-  },
-  {
-    key: 'IN_PROGRESS',
-    label: 'In Progress',
-    headerTextClass: 'text-blue-800',
-    countChipClass: 'bg-blue-100 text-blue-700',
-    columnStyle: 'border-blue-200 bg-blue-50/50',
-  },
-  {
-    key: 'COMPLETED',
-    label: 'Completed',
-    headerTextClass: 'text-green-800',
-    countChipClass: 'bg-green-100 text-green-700',
-    columnStyle: 'border-green-200 bg-green-50/50',
-  },
-  /* {
-    key: 'SKIPPED',
-    label: 'Skipped',
-    headerTextClass: 'text-orange-800',
-    countChipClass: 'bg-orange-100 text-orange-700',
-    columnStyle: 'border-orange-200 bg-orange-50/50',
-  }, */
-  {
-    key: 'OVERDUE',
-    label: 'Overdue',
-    headerTextClass: 'text-red-800',
-    countChipClass: 'bg-red-100 text-red-700',
-    columnStyle: 'border-red-200 bg-red-50/50',
-  },
-]
-
-// ── Theme-aware status accent dots (summary cards) ─────────────────────────────
-const CHECKLIST_STATUS_SUMMARY_DOTS: Record<ChecklistStatus, string> = {
-  NOT_STARTED: 'bg-gray-500',
-  IN_PROGRESS: 'bg-blue-500',
-  COMPLETED: 'bg-green-500',
-  SKIPPED: 'bg-orange-500',
-  OVERDUE: 'bg-red-500',
-}
 
 interface TaskExecutionDetailProps {
   readOnly?: boolean
@@ -338,23 +283,22 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
     )
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {ALL_CHECKLIST_STATUSES.map((s) => (
-          <button
-            key={s}
-            onClick={() => setChecklistStatusFilter(checklistStatusFilter === s ? null : s)}
-            className={`rounded-xl cursor-pointer border border-border bg-card p-3 text-center transition-colors ${checklistStatusFilter === s ? 'ring-2 ring-primary' : 'hover:opacity-80'
-              }`}
-          >
-            <div className="text-2xl font-bold text-foreground">{statusCounts[s]}</div>
-            <div className="flex items-center justify-center gap-1.5 mt-0.5">
-              <span className={`h-2 w-2 rounded-full ${CHECKLIST_STATUS_SUMMARY_DOTS[s]}`} />
-              <span className="text-xs font-medium text-muted-foreground">
-                {CHECKLIST_STATUS_LABELS[s]}
-              </span>
-            </div>
-          </button>
-        ))}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {ALL_CHECKLIST_STATUSES.map((s) => {
+          const { icon: Icon, dot } = CHECKLIST_STATUS_ICONS[s]
+          return (
+            <StatusSummaryCard
+              key={s}
+              status={s}
+              count={statusCounts[s]}
+              label={CHECKLIST_STATUS_LABELS[s]}
+              icon={Icon}
+              dotColor={dot}
+              isActive={checklistStatusFilter === s}
+              onClick={() => setChecklistStatusFilter(checklistStatusFilter === s ? null : s)}
+            />
+          )
+        })}
       </div>
     )
   }
@@ -440,7 +384,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
     return (
       <div className="overflow-x-auto pb-4" style={{ WebkitOverflowScrolling: 'touch' }}>
         <div className="flex gap-4" style={{ minWidth: 'max-content', width: '100%' }}>
-          {CHECKLIST_KANBAN_COLUMNS.map((column) => {
+          {KANBAN_COLUMNS.map((column) => {
             const columnTasks = checklistStatusFilter
               ? sortedChecklists.filter((cl) => cl.checklistStatus === checklistStatusFilter)
               : sortedChecklists.filter((cl) => cl.checklistStatus === column.key)
@@ -518,7 +462,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
     }
 
     return (
-      <div className="overflow-x-auto rounded-lg border border-border bg-background">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm min-w-[1000px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
@@ -546,13 +490,10 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                   <td className="p-3">
                     <div className="flex flex-col">
                       <span className="font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
-                        {/* {cl.taskChecklist?.sequence != null && (
-                          <span className="text-muted-foreground mr-1.5">{cl.taskChecklist.sequence}.</span>
-                        )} */}
                         {cl.taskChecklist?.title || `Checklist #${cl.mstChecklistId}`}
                       </span>
                       {cl.taskChecklist?.regionalText && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                        <span className="text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
                           {cl.taskChecklist.regionalText}
                         </span>
                       )}
@@ -614,24 +555,21 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
 
       {/* Task info card — title, regional text, store/date/time */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="p-4">
+        <div className="p-4 space-y-2">
           {/* Title + status badge */}
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h1 className="text-lg font-medium text-foreground">
               {taskExecution.mstTask?.title || `Task #${taskExecution.mstTaskId}`}
             </h1>
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${statusColorClass}`}>
-              {statusLabel}
-            </span>
           </div>
 
           {/* Regional text */}
           {taskExecution.mstTask?.regionalText && (
-            <p className="mt-1 text-md text-muted-foreground">{taskExecution.mstTask.regionalText}</p>
+            <p className="text-md text-muted-foreground">{taskExecution.mstTask.regionalText}</p>
           )}
 
           {/* Meta strip — store, date, time */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
             {taskExecution.store && (
               <span className="inline-flex items-center gap-1.5 font-semibold">
                 <StoreIcon className="h-3.5 w-3.5 text-primary" />
@@ -657,8 +595,12 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
 
           {/* Description */}
           {taskExecution.mstTask?.description && (
-            <p className="mt-3 text-sm text-muted-foreground">{taskExecution.mstTask.description}</p>
+            <p className="text-sm text-muted-foreground">{taskExecution.mstTask.description}</p>
           )}
+
+          <div className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${statusColorClass}`}>
+            {statusLabel}
+          </div>
         </div>
       </div>
       {/* ==== Checklists section — Grid / Kanban / Table ==== */}
@@ -729,146 +671,146 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
         <div className="p-4">
           {/* Action + Timeline side by side (1 col mobile, 2 cols sm+) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {/* Action section — hide when there are checklist items or readOnly */}
-          {!readOnly && (!checklistExecutions || checklistExecutions.length === 0) && (
-            <div className="h-full rounded-xl border border-border p-4">
-              {taskExecution.executionStatus === 'NOT_STARTED' && (
-                <div className="text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
-                    <Hourglass className="h-7 w-7" />
-                  </div>
-                  {isTimeToStart(taskExecution.fromTime) ? (
-                    <>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        This task is pending. Start it to begin working.
-                      </p>
-                      <ActionButton
-                        action="signin"
-                        layout="grid"
-                        title="Start Task"
-                        onClick={handleStartTask}
-                        disabled={isStarting}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-orange-500 font-medium mb-1">
-                        Task starts at {formatTime(taskExecution.fromTime)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Please wait until the scheduled start time to begin.
-                      </p>
-                      <ActionButton
-                        action="signin"
-                        layout="grid"
-                        title={`Starts at ${formatTime(taskExecution.fromTime)}`}
-                        disabled={true}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-
-              {(taskExecution.executionStatus === 'IN_PROGRESS' ||
-                taskExecution.executionStatus === 'OVERDUE') && (
+            {/* Action section — hide when there are checklist items or readOnly */}
+            {!readOnly && (!checklistExecutions || checklistExecutions.length === 0) && (
+              <div className="h-full rounded-xl border border-border p-4">
+                {taskExecution.executionStatus === 'NOT_STARTED' && (
                   <div className="text-center">
-                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                      <PlayCircle className="h-7 w-7" />
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <Hourglass className="h-7 w-7" />
                     </div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Task is in progress.
-                    </p>
-                    {taskExecution.startedAt && (
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Started at: {formatDateTime(taskExecution.startedAt)}
-                      </p>
+                    {isTimeToStart(taskExecution.fromTime) ? (
+                      <>
+                        <p className="text-sm text-muted-foreground mb-4">
+                          This task is pending. Start it to begin working.
+                        </p>
+                        <ActionButton
+                          action="signin"
+                          layout="grid"
+                          title="Start Task"
+                          onClick={handleStartTask}
+                          disabled={isStarting}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <p className="text-sm text-orange-500 font-medium mb-1">
+                          Task starts at {formatTime(taskExecution.fromTime)}
+                        </p>
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Please wait until the scheduled start time to begin.
+                        </p>
+                        <ActionButton
+                          action="signin"
+                          layout="grid"
+                          title={`Starts at ${formatTime(taskExecution.fromTime)}`}
+                          disabled={true}
+                        />
+                      </>
                     )}
-                    <ActionButton
-                      action="activate"
-                      layout="grid"
-                      title="Complete Task"
-                      onClick={() => setShowCompleteConfirm(true)}
-                      disabled={isCompleting}
-                    />
                   </div>
                 )}
 
-              {taskExecution.executionStatus === 'COMPLETED' && (
-                <div className="text-center">
-                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
-                    <PartyPopper className="h-7 w-7" />
-                  </div>
-                  <p className="text-sm text-green-600 font-medium">Task completed</p>
-                  {taskExecution.completedAt && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Completed at: {formatDateTime(taskExecution.completedAt)}
-                    </p>
-                  )}
-                  {taskExecution.completedByUser && (
-                    <p className="text-xs text-muted-foreground">
-                      by {taskExecution.completedByUser.firstName} {taskExecution.completedByUser.lastName}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          {/* Timeline section — vertical stepper, responsive */}
-          <div className="h-full rounded-xl border border-border p-4">
-            <h3 className="text-sm font-semibold text-foreground mb-4">Timeline</h3>
-
-            {(() => {
-              const startedAt = taskExecution.startedAt
-              const completedAt = taskExecution.completedAt
-              const isCompleted = taskExecution.executionStatus === 'COMPLETED'
-
-              const steps = [
-                {
-                  key: 'started',
-                  label: 'Started',
-                  value: startedAt ? formatDateTime(startedAt) : null,
-                  icon: <PlayCircle className="h-4 w-4" />,
-                  iconClass: 'bg-blue-100 text-blue-600 ring-2 ring-blue-100',
-                },
-                {
-                  key: 'completed',
-                  label: 'Completed',
-                  value: completedAt ? formatDateTime(completedAt) : null,
-                  icon: isCompleted
-                    ? <CircleCheckBig className="h-4 w-4" />
-                    : <BadgeCheck className="h-4 w-4" />,
-                  iconClass: isCompleted
-                    ? 'bg-green-100 text-green-600 ring-2 ring-green-100'
-                    : 'bg-muted text-muted-foreground ring-2 ring-muted',
-                },
-              ]
-
-              return (
-                <div className="relative">
-                  <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-border" />
-                  <div className="space-y-6 relative">
-                    {steps.map((step) => (
-                      <div key={step.key} className="flex items-start gap-4">
-                        <div
-                          className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${step.iconClass}`}
-                        >
-                          {step.icon}
-                        </div>
-                        <div className="flex-1 pt-0.5">
-                          <p className="text-sm font-medium text-foreground">{step.label}</p>
-                          {step.value ? (
-                            <p className="text-sm text-muted-foreground mt-0.5">{step.value}</p>
-                          ) : (
-                            <p className="text-sm text-muted-foreground italic mt-0.5">Not {step.label.toLowerCase()} yet</p>
-                          )}
-                        </div>
+                {(taskExecution.executionStatus === 'IN_PROGRESS' ||
+                  taskExecution.executionStatus === 'OVERDUE') && (
+                    <div className="text-center">
+                      <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                        <PlayCircle className="h-7 w-7" />
                       </div>
-                    ))}
+                      <p className="text-sm text-muted-foreground mb-1">
+                        Task is in progress.
+                      </p>
+                      {taskExecution.startedAt && (
+                        <p className="text-xs text-muted-foreground mb-4">
+                          Started at: {formatDateTime(taskExecution.startedAt)}
+                        </p>
+                      )}
+                      <ActionButton
+                        action="activate"
+                        layout="grid"
+                        title="Complete Task"
+                        onClick={() => setShowCompleteConfirm(true)}
+                        disabled={isCompleting}
+                      />
+                    </div>
+                  )}
+
+                {taskExecution.executionStatus === 'COMPLETED' && (
+                  <div className="text-center">
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
+                      <PartyPopper className="h-7 w-7" />
+                    </div>
+                    <p className="text-sm text-green-600 font-medium">Task completed</p>
+                    {taskExecution.completedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Completed at: {formatDateTime(taskExecution.completedAt)}
+                      </p>
+                    )}
+                    {taskExecution.completedByUser && (
+                      <p className="text-xs text-muted-foreground">
+                        by {taskExecution.completedByUser.firstName} {taskExecution.completedByUser.lastName}
+                      </p>
+                    )}
                   </div>
-                </div>
-              )
-            })()}
-          </div>
+                )}
+              </div>
+            )}
+            {/* Timeline section — vertical stepper, responsive */}
+            <div className="h-full rounded-xl border border-border p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Timeline</h3>
+
+              {(() => {
+                const startedAt = taskExecution.startedAt
+                const completedAt = taskExecution.completedAt
+                const isCompleted = taskExecution.executionStatus === 'COMPLETED'
+
+                const steps = [
+                  {
+                    key: 'started',
+                    label: 'Started',
+                    value: startedAt ? formatDateTime(startedAt) : null,
+                    icon: <PlayCircle className="h-4 w-4" />,
+                    iconClass: 'bg-blue-100 text-blue-600 ring-2 ring-blue-100',
+                  },
+                  {
+                    key: 'completed',
+                    label: 'Completed',
+                    value: completedAt ? formatDateTime(completedAt) : null,
+                    icon: isCompleted
+                      ? <CircleCheckBig className="h-4 w-4" />
+                      : <BadgeCheck className="h-4 w-4" />,
+                    iconClass: isCompleted
+                      ? 'bg-green-100 text-green-600 ring-2 ring-green-100'
+                      : 'bg-muted text-muted-foreground ring-2 ring-muted',
+                  },
+                ]
+
+                return (
+                  <div className="relative">
+                    <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-border" />
+                    <div className="space-y-6 relative">
+                      {steps.map((step) => (
+                        <div key={step.key} className="flex items-start gap-4">
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${step.iconClass}`}
+                          >
+                            {step.icon}
+                          </div>
+                          <div className="flex-1 pt-0.5">
+                            <p className="text-sm font-medium text-foreground">{step.label}</p>
+                            {step.value ? (
+                              <p className="text-sm text-muted-foreground mt-0.5">{step.value}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground italic mt-0.5">Not {step.label.toLowerCase()} yet</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
           </div>
 
           {/* Completed By section */}

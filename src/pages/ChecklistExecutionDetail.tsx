@@ -14,13 +14,13 @@ import {
   Paperclip,
   X,
   FileText,
-  Flag,
   ShieldCheck,
+  Flag,
 } from 'lucide-react'
 import { taskService } from '../services/apiManager'
 import { decodeToken, getStoredTokens } from '../utils/auth'
 import type { TaskChecklistExecution, ChecklistStatus } from '../types/task-checklist-execution'
-import { CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS } from '../types/task-checklist-execution'
+import { CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS, CHECKLIST_PRIORITY_LABELS } from '../types/task-checklist-execution'
 import type { EvidenceResponseDto } from '../types/evidence'
 import { getEvidenceFileIcon, isImageFile } from '../types/evidence'
 import { ActionButton } from '../components/ui/ActionButton'
@@ -292,6 +292,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
   // Derived checklist config from the linked TaskChecklist
   const checklistPriority = checklistExecution.taskChecklist?.priority
+  const checklistPriorityLabel = checklistPriority ? CHECKLIST_PRIORITY_LABELS[checklistPriority as keyof typeof CHECKLIST_PRIORITY_LABELS] : undefined
   const isProofMandatory = checklistExecution.taskChecklist?.proofMandatory === true
   const uploadType = checklistExecution.taskChecklist?.uploadType || 'PHOTO'
   const isPhotoUpload = uploadType === 'PHOTO'
@@ -313,21 +314,63 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
         subtitle="View and manage your assigned checklist"
       />
 
+      {/* Action Buttons — Start / Complete Task */}
+      {!readOnly && (
+          <div className="flex flex-col sm:flex-row gap-3 justify-end">
+            {checklistExecution?.checklistStatus === 'NOT_STARTED' && (
+              <>
+                {isTimeToStart(checklistExecution.fromTime) ? (
+                  <ActionButton
+                    action="signin"
+                    layout="grid"
+                    title="Start Task"
+                    onClick={handleStartTask}
+                    disabled={isStarting}
+                  />
+                ) : (
+                  <ActionButton
+                    action="signin"
+                    layout="grid"
+                    title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                    disabled={true}
+                  />
+                )}
+              </>
+            )}
+
+            {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
+              <ActionButton
+                action="activate"
+                layout="grid"
+                title="Complete Task"
+                onClick={() => {
+                  if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                    toast.error('Please upload the required evidence before completing this checklist.')
+                    return
+                  }
+                  setShowCompleteConfirm(true)
+                }}
+                disabled={isCompleting}
+              />
+            )}
+          </div>
+      )}
+
       {/* ==== Checklist Info Card ==== */}
       <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
-        <div className="p-4">
+        <div className="p-4 space-y-3">
           {/* Title */}
-          <h1 className="text-lg font-medium text-foreground">
+          <h1 className="text-lg font-medium text-foreground leading-tight">
             {checklistExecution.taskChecklist?.title || `Checklist #${checklistExecution.mstChecklistId}`}
           </h1>
 
           {/* Regional text */}
           {checklistExecution.taskChecklist?.regionalText && (
-            <p className="mt-1 text-md text-muted-foreground">{checklistExecution.taskChecklist.regionalText}</p>
+            <p className="text-md text-muted-foreground">{checklistExecution.taskChecklist.regionalText}</p>
           )}
 
           {/* Meta strip — scheduled time, mapped task, ID */}
-          <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
             {checklistExecution.fromTime && (
               <span className="inline-flex items-center gap-1.5">
                 <Clock className="h-3.5 w-3.5" />
@@ -351,7 +394,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
           {/* Description */}
           {checklistExecution.taskChecklist?.description && (
-            <div className="mt-3">
+            <div className="">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                 Description
               </label>
@@ -360,20 +403,18 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
           )}
 
           {/* Badges — mandatory, priority, status */}
-          <div className="mt-3 flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-xs font-medium ${checklistStatusColor}`}>
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${checklistStatusColor}`}>
               {checklistStatusLabel}
             </span>
             {checklistExecution.taskChecklist?.isMandatory && (
-              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium text-red-600 bg-red-50">
-                <ShieldCheck className="h-3.5 w-3.5" />
+              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium text-red-600 bg-red-50">
                 Mandatory
               </span>
             )}
             {checklistPriority && (
-              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium ${getPriorityColor(checklistPriority)}`}>
-                <Flag className="h-3.5 w-3.5" />
-                {checklistPriority}
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium ${getPriorityColor(checklistPriority)}`}>
+                {checklistPriorityLabel || checklistPriority}
               </span>
             )}
           </div>
@@ -533,7 +574,10 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
       {/* ==== Activity Card (Action + Timeline + Completed By) ==== */}
       <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
         <div className="px-4 py-3 border-b border-border">
-          <h2 className="text-base font-semibold text-foreground">Activity</h2>
+          <div className="flex items-center gap-2">
+            <Flag className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">Activity</h2>
+          </div>
         </div>
         <div className="p-4">
           {/* Action + Timeline side by side (1 col mobile, 2 cols sm+) */}
@@ -562,7 +606,6 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                     ) : (
                       <>
                         <p className="text-sm text-orange-500 font-medium mb-1">
-                          <Clock className="mr-1 h-4 w-4" />
                           Checklist starts at {formatTime(checklistExecution.fromTime)}
                         </p>
                         <p className="text-xs text-muted-foreground mb-4">

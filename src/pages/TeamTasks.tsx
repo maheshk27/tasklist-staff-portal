@@ -15,79 +15,19 @@ import FilterSection from '../components/FilterSection'
 import FormSelect from '../components/ui/FormSelect'
 import FormField from '../components/ui/FormField'
 import TaskCard from '../components/TaskCard'
+import StatusSummaryCard, { TASK_STATUS_ICONS } from '../components/StatusSummaryCard'
 import type { StoreWithMapping } from '../types/user-store'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import {
   TASK_STATUS_COLORS,
   TASK_STATUS_LABELS,
   ALL_TASK_STATUSES,
+  KANBAN_COLUMNS,
 } from '../types/task-execution'
 import type { StoreUserItem } from '../services/apiManager'
 import { formatDate, formatTime } from '../utils/date'
 
 type ViewMode = 'grid' | 'kanban' | 'table'
-
-// ── Kanban column configuration ────────────────────────────────────────────────
-interface KanbanColumn {
-  key: TaskExecutionStatus
-  label: string
-  colorClass: string
-  headerTextClass: string
-  countChipClass: string
-  columnStyle: string
-}
-
-const KANBAN_COLUMNS: KanbanColumn[] = [
-  {
-    key: 'NOT_STARTED',
-    label: 'Not Started',
-    colorClass: 'bg-gray-100 text-gray-800',
-    headerTextClass: 'text-gray-800',
-    countChipClass: 'bg-gray-100 text-gray-700',
-    columnStyle: 'border-gray-200 bg-gray-50/50',
-  },
-  {
-    key: 'IN_PROGRESS',
-    label: 'In Progress',
-    colorClass: 'bg-blue-100 text-blue-800',
-    headerTextClass: 'text-blue-800',
-    countChipClass: 'bg-blue-100 text-blue-700',
-    columnStyle: 'border-blue-200 bg-blue-50/50',
-  },
-  {
-    key: 'COMPLETED',
-    label: 'Completed',
-    colorClass: 'bg-green-100 text-green-800',
-    headerTextClass: 'text-green-800',
-    countChipClass: 'bg-green-100 text-green-700',
-    columnStyle: 'border-green-200 bg-green-50/50',
-  },
-  {
-    key: 'SKIPPED',
-    label: 'Skipped',
-    colorClass: 'bg-orange-100 text-orange-800',
-    headerTextClass: 'text-orange-800',
-    countChipClass: 'bg-orange-100 text-orange-700',
-    columnStyle: 'border-orange-200 bg-orange-50/50',
-  },
-  {
-    key: 'OVERDUE',
-    label: 'Overdue',
-    colorClass: 'bg-red-100 text-red-800',
-    headerTextClass: 'text-red-800',
-    countChipClass: 'bg-red-100 text-red-700',
-    columnStyle: 'border-red-200 bg-red-50/50',
-  },
-]
-
-// ── Theme-aware status accent dots (summary cards) ─────────────────────────────
-const STATUS_SUMMARY_DOTS: Record<TaskExecutionStatus, string> = {
-  NOT_STARTED: 'bg-gray-500',
-  IN_PROGRESS: 'bg-blue-500',
-  COMPLETED: 'bg-green-500',
-  SKIPPED: 'bg-orange-500',
-  OVERDUE: 'bg-red-500',
-}
 
 const TeamTasks: React.FC = () => {
   const { user } = useAuth()
@@ -241,7 +181,7 @@ const TeamTasks: React.FC = () => {
   useEffect(() => {
     fetchTasks()
   }, [fetchTasks])
-// ── Handlers ──────────────────────────────────────────────────────────────────
+  // ── Handlers ──────────────────────────────────────────────────────────────────
   const handleStoreSelect = (storeId: number) => {
     setSelectedStoreId(storeId)
     setStatusFilter(null) // Reset filter on store change
@@ -297,24 +237,22 @@ const TeamTasks: React.FC = () => {
     )
 
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
-        {ALL_TASK_STATUSES.map((status) => (
-          <button
-            key={status}
-            onClick={() => setStatusFilter(statusFilter === status ? null : status)}
-            className={`rounded-xl cursor-pointer border border-border bg-card p-3 text-center transition-colors ${
-              statusFilter === status ? 'ring-2 ring-primary' : 'hover:opacity-80'
-            }`}
-          >
-            <div className="text-2xl font-bold text-foreground">{statusCounts[status]}</div>
-            <div className="flex items-center justify-center gap-1.5 mt-0.5">
-              <span className={`h-2 w-2 rounded-full ${STATUS_SUMMARY_DOTS[status]}`} />
-              <span className="text-xs font-medium text-muted-foreground">
-                {TASK_STATUS_LABELS[status]}
-              </span>
-            </div>
-          </button>
-        ))}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
+        {ALL_TASK_STATUSES.map((status) => {
+          const { icon: Icon, dot } = TASK_STATUS_ICONS[status]
+          return (
+            <StatusSummaryCard
+              key={status}
+              status={status}
+              count={statusCounts[status]}
+              label={TASK_STATUS_LABELS[status]}
+              icon={Icon}
+              dotColor={dot}
+              isActive={statusFilter === status}
+              onClick={() => setStatusFilter(statusFilter === status ? null : status)}
+            />
+          )
+        })}
       </div>
     )
   }
@@ -335,11 +273,10 @@ const TeamTasks: React.FC = () => {
           <button
             key={key}
             onClick={() => setViewMode(key)}
-            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${
-              viewMode === key
+            className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors ${viewMode === key
                 ? 'bg-primary text-primary-foreground shadow-sm'
                 : 'text-muted-foreground hover:bg-muted hover:text-foreground'
-            }`}
+              }`}
           >
             <Icon className="h-4 w-4" />
             <span>{label}</span>
@@ -348,7 +285,7 @@ const TeamTasks: React.FC = () => {
       </div>
     )
   }
-// ── Render filters (search area: Store + User + Date + Sort) ───────────────────
+  // ── Render filters (search area: Store + User + Date + Sort) ───────────────────
   const renderFilters = () => (
     <div className="bg-card rounded-xl border border-border">
       <FilterSection
@@ -467,7 +404,7 @@ const TeamTasks: React.FC = () => {
       </div>
     </div>
   )
-// ── Render Grid layout ────────────────────────────────────────────────────────
+  // ── Render Grid layout ────────────────────────────────────────────────────────
   const renderGridLayout = () => {
     if (isLoadingTasks) {
       return (
@@ -602,7 +539,7 @@ const TeamTasks: React.FC = () => {
       </div>
     )
   }
-// ── Render DataTable layout ───────────────────────────────────────────────────
+  // ── Render DataTable layout ───────────────────────────────────────────────────
   const renderDataTableLayout = () => {
     if (isLoadingTasks) {
       return (
@@ -634,7 +571,7 @@ const TeamTasks: React.FC = () => {
     }
 
     return (
-      <div className="overflow-x-auto rounded-lg border border-border bg-background">
+      <div className="overflow-x-auto rounded-lg border border-border">
         <table className="w-full text-sm min-w-[1000px]">
           <thead>
             <tr className="border-b border-border bg-muted/50">
@@ -665,11 +602,9 @@ const TeamTasks: React.FC = () => {
                       <span className="font-medium text-foreground truncate max-w-[200px] sm:max-w-[300px]">
                         {task.mstTask?.title || `Task #${task.mstTaskId}`}
                       </span>
-                      {task.mstTask?.regionalText && (
-                        <span className="text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
-                          {task.mstTask.regionalText}
-                        </span>
-                      )}
+                      <span className="text-muted-foreground truncate max-w-[200px] sm:max-w-[300px]">
+                        {task.mstTask?.regionalText ? task.mstTask?.regionalText : "Not Available"}
+                      </span>
                     </div>
                   </td>
                   <td className="p-3 text-muted-foreground whitespace-nowrap">
@@ -711,7 +646,7 @@ const TeamTasks: React.FC = () => {
       </div>
     )
   }
-// ── Main render ───────────────────────────────────────────────────────────────
+  // ── Main render ───────────────────────────────────────────────────────────────
   return (
     <div className="space-y-6">
       {/* Page header (with view-switcher actions) */}

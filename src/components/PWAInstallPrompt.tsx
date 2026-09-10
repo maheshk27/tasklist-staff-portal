@@ -61,25 +61,33 @@ const PWAInstallPrompt = () => {
   if (!isVisible || isDismissed) return null
 
   return (
-    <div className="fixed bottom-4 left-4 right-4 z-50 max-w-md mx-auto">
-      <div className="bg-card border border-border rounded-lg shadow-lg p-4 flex items-center gap-3">
-        <div className="w-10 h-10 bg-primary rounded-full flex items-center justify-center text-primary-foreground font-bold shrink-0">
-          RB
+    <div className="fixed bottom-4 left-4 right-4 z-50 mx-auto">
+      <div className="bg-card border border-border rounded-xl shadow-lg overflow-hidden max-w-md mx-auto">
+        {/* Top row: Logo + Message */}
+        <div className="p-3 flex items-center gap-3">
+          <img
+            src="/logo-192x192.png"
+            alt="RK Bazar Logo"
+            className="w-11 h-11 rounded-lg shadow-sm shrink-0"
+          />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-foreground truncate">Install RK Bazar - Staff Portal</p>
+            <p className="text-xs text-muted-foreground truncate">Add to home screen for quick access</p>
+          </div>
         </div>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-foreground">Install RK Bazar App</p>
-          <p className="text-xs text-muted-foreground">Add to your home screen for quick access</p>
-        </div>
-        <div className="flex items-center gap-2">
+
+        {/* Buttons - full width at bottom */}
+        <div className="border-t border-border flex">
           <button
             onClick={handleDismiss}
-            className="px-3 py-1.5 text-xs font-medium text-muted-foreground hover:text-foreground transition-colors"
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
           >
             Later
           </button>
+          <div className="w-px bg-border" />
           <button
             onClick={handleInstall}
-            className="px-3 py-1.5 text-xs font-medium bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-primary hover:bg-primary/10 transition-colors"
           >
             Install
           </button>

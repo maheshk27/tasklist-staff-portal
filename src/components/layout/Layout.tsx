@@ -14,7 +14,7 @@ import {
   Settings,
   User,
   Eye,
-  Lock
+  Lock,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useNotifications'
@@ -141,7 +141,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       title: 'My Account',
       icon: User,
       children: [
-        { title: 'Profile', icon: User, path: '/profile' },
+        { title: 'My Profile', icon: User, path: '/profile' },
         { title: 'Settings', icon: Settings, path: '/settings' },
         { title: 'Change Password', icon: Lock, path: '/change-password' },
         { title: 'Login Logs', icon: Eye, path: '/login-logs' },
@@ -299,10 +299,42 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
               </button>
               {userMenuOpen && (
                 <div className="absolute right-0 z-40 mt-2 w-60 rounded-2xl border border-border bg-popover/95 p-1.5 shadow-xl backdrop-blur">
-                  <div className="mb-1 border-b border-border px-3 py-2.5">
-                    <p className="text-sm font-semibold">{fullName}</p>
-                    <p className="text-xs text-muted-foreground">{roleName}</p>
-                  </div>
+                  <Link 
+                    to="/profile" 
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors hover:bg-muted"
+                  >
+                    <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-accent text-xs font-bold text-primary-foreground">
+                      {avatarText}
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="truncate font-semibold text-foreground">{fullName}</p>
+                      <p className="truncate text-xs text-muted-foreground">{roleName}</p>
+                    </div>
+                  </Link>
+                  <div className="my-1 border-t border-border" />
+                  <Link 
+                    to="/profile" 
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    <User className="h-4 w-4" /> My Profile
+                  </Link>
+                  <Link 
+                    to="/change-password" 
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    <Lock className="h-4 w-4" /> Change Password
+                  </Link>
+                  <Link 
+                    to="/settings" 
+                    onClick={() => setUserMenuOpen(false)}
+                    className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground transition-colors hover:bg-muted"
+                  >
+                    <Settings className="h-4 w-4" /> Settings
+                  </Link>
+                  <div className="my-1 border-t border-border" />
                   <button onClick={() => { setUserMenuOpen(false); setShowLogoutConfirm(true) }} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-destructive transition-colors hover:bg-destructive/10">
                     <LogOut className="h-4 w-4" /> Logout
                   </button>

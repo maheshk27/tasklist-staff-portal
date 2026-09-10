@@ -35,7 +35,7 @@ const StatusSummaryCard: React.FC<StatusSummaryCardProps> = ({
   return (
     <button
       onClick={onClick}
-      className={`w-full rounded-2xl border border-border bg-card p-4 text-center shadow-sm transition-all ${
+      className={`w-full rounded-2xl cursor-pointer border border-border bg-card p-4 text-center shadow-sm transition-all ${
         isActive ? 'ring-2 ring-primary' : 'hover:opacity-80 hover:shadow-md'
       }`}
     >

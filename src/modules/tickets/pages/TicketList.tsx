@@ -407,7 +407,7 @@ const TicketList: React.FC = () => {
   const renderStatusSummary = () => {
     if (filteredTickets.length === 0) return null
     return (
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-3 md:grid-cols-3 lg:grid-cols-7 gap-3">
         {ALL_TICKET_STATUSES.map((status) => (
           <div key={status} className={`rounded-lg border p-3 text-center ${TICKET_BOARD_BG[status]}`}>
             <div className="text-2xl font-bold text-foreground">{statusCounts[status] || 0}</div>

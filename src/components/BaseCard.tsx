@@ -59,9 +59,9 @@ const BaseCard: React.FC<BaseCardProps> = ({
       onClick={onClick}
       className={`w-full cursor-pointer text-left border border-border rounded-lg p-3 bg-background hover:shadow-md transition-shadow hover:border-primary/30 group ${className}`}
     >
-      <div className={`space-y-${compact ? '2' : '1.5'}`}>
+      <div className="space-y-2">
         {/* Title */}
-        <h5 className="text-sm font-medium text-foreground truncate">{title}</h5>
+        <h5 className="text-sm font-semibold text-foreground truncate">{title}</h5>
 
         {/* Regional text */}
         {regionalText ? (

@@ -243,10 +243,10 @@ const SurveyList: React.FC = () => {
               key={survey.surveyId}
               className="bg-card border border-border rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col"
             >
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex-1 space-y-3">
+                <h3 className="text-md font-medium text-foreground">{survey.surveyName}</h3>
+                <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-semibold text-foreground">{survey.surveyName}</h3>
                     {survey.surveyDays && survey.surveyDays.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {survey.surveyDays.map((day) => (
@@ -287,7 +287,7 @@ const SurveyList: React.FC = () => {
                 )}
               </div>
 
-              <div className="mt-auto pt-3 border-t border-border">
+              <div>
                 {!survey.dailySurveyId ? (
                   <button
                     onClick={() => handleStartSurvey(survey)}

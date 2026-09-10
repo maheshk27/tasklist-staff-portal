@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard,
@@ -51,8 +51,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [notificationsLoading, setNotificationsLoading] = useState(false)
   const [notificationError, setNotificationError] = useState<string | null>(null)
   const [isNotificationPanelOpen, setIsNotificationPanelOpen] = useState(false)
-  const bellButtonRef = useRef<HTMLButtonElement>(null)
-  const notificationPanelRef = useRef<HTMLDivElement>(null)
 
   const unreadCount = notifications.filter(n => !n.isRead).length
 
@@ -101,23 +99,11 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   useEffect(() => {
     if (!isNotificationPanelOpen) return
-    const handleClickOutside = (event: MouseEvent) => {
-      if (
-        notificationPanelRef.current &&
-        !notificationPanelRef.current.contains(event.target as Node) &&
-        bellButtonRef.current &&
-        !bellButtonRef.current.contains(event.target as Node)
-      ) {
-        setIsNotificationPanelOpen(false)
-      }
-    }
     const handleKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') setIsNotificationPanelOpen(false)
     }
-    document.addEventListener('mousedown', handleClickOutside)
     document.addEventListener('keydown', handleKeyDown)
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
       document.removeEventListener('keydown', handleKeyDown)
     }
   }, [isNotificationPanelOpen])
@@ -221,70 +207,23 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
             >
               {theme === 'light' ? <Moon className="h-5 w-5" /> : <Sun className="h-5 w-5" />}
             </button>
-            <div className="relative">
-              <button
-                ref={bellButtonRef}
-                onClick={() => {
-                  setIsNotificationPanelOpen(prev => !prev)
-                  if (!isNotificationPanelOpen) {
-                    fetchNotifications()
-                  }
-                }}
-                className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-                aria-label="Notifications"
-              >
-                <Bell className="h-5 w-5" />
-                {unreadCount > 0 && (
-                  <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
-                    {unreadCount > 99 ? '99+' : unreadCount}
-                  </span>
-                )}
-              </button>
-              {isNotificationPanelOpen && (
-                <div
-                  ref={notificationPanelRef}
-                  className="absolute right-0 z-40 mt-2 w-80 md:w-96 bg-popover/95 border border-border rounded-2xl shadow-xl backdrop-blur overflow-hidden"
-                >
-                  <div className="p-3 border-b border-border flex items-center justify-between">
-                    <h3 className="text-sm font-semibold">Notifications</h3>
-                    <button onClick={() => setIsNotificationPanelOpen(false)} className="text-muted-foreground hover:text-foreground">
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" /></svg>
-                    </button>
-                  </div>
-                  {notificationsLoading ? (
-                    <div className="p-4 text-center"><p className="text-sm text-muted-foreground">Loading...</p></div>
-                  ) : notificationError ? (
-                    <div className="p-4 text-center"><p className="text-sm text-destructive">{notificationError}</p></div>
-                  ) : notifications.length === 0 ? (
-                    <div className="text-center py-10"><Bell className="w-12 h-12 text-muted-foreground/30 mx-auto mb-2" /><p className="text-sm text-muted-foreground">No notifications</p></div>
-                  ) : (
-                    <div className="max-h-[400px] overflow-y-auto">
-                      {notifications.map((notification) => (
-                        <div key={notification.notificationId} className={`p-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${notification.isRead ? 'opacity-60' : ''}`}>
-                          <button type="button" onClick={() => handleOpenNotification(notification)} className="min-w-0 w-full text-left mb-2">
-                            <p className="text-sm font-medium text-foreground truncate">{notification.title || 'Notification'}</p>
-                            <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.body || ''}</p>
-                            <p className="text-[10px] text-muted-foreground/60 mt-1">{notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}</p>
-                          </button>
-                          <div className="flex items-center justify-end gap-1">
-                            <button type="button" onClick={() => handleOpenNotification(notification)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                              <Eye className="w-3 h-3" />
-                              View
-                            </button>
-                            {!notification.isRead && (
-                              <button type="button" onClick={() => handleMarkAsRead(notification.notificationId)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
-                                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
-                                Read
-                              </button>
-                            )}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+            <button
+              onClick={() => {
+                setIsNotificationPanelOpen(prev => !prev)
+                if (!isNotificationPanelOpen) {
+                  fetchNotifications()
+                }
+              }}
+              className="relative inline-flex h-10 w-10 items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
+              aria-label="Notifications"
+            >
+              <Bell className="h-5 w-5" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center min-w-[18px] h-[18px] px-1 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold">
+                  {unreadCount > 99 ? '99+' : unreadCount}
+                </span>
               )}
-            </div>
+            </button>
             <div className="relative ml-1">
               <button
                 onClick={() => setUserMenuOpen(o => !o)}
@@ -418,6 +357,73 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className="mx-auto max-w-8xl">{children}</div>
         </main>
       </div>
+      {isNotificationPanelOpen && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="fixed inset-0 bg-black/50 z-50"
+            onClick={() => setIsNotificationPanelOpen(false)}
+          />
+
+          {/* Right side panel */}
+          <div
+            className="fixed top-0 right-0 bottom-0 z-50 bg-card border-l border-border shadow-xl overflow-y-auto"
+            style={{ width: '460px', maxWidth: '100%' }}
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="notification-modal-title"
+          >
+            {/* Header */}
+            <div className="sticky top-0 bg-card border-b border-border p-4 flex items-center justify-between z-10">
+              <h2 id="notification-modal-title" className="text-xl font-semibold">
+                Notifications
+              </h2>
+              <button
+                onClick={() => setIsNotificationPanelOpen(false)}
+                className="p-2 rounded-lg hover:bg-muted transition-colors"
+                aria-label="Close notifications"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            {/* Content */}
+            <div className="p-4">
+              {notificationsLoading ? (
+                <div className="p-4 text-center"><p className="text-sm text-muted-foreground">Loading...</p></div>
+              ) : notificationError ? (
+                <div className="p-4 text-center"><p className="text-sm text-destructive">{notificationError}</p></div>
+              ) : notifications.length === 0 ? (
+                <div className="text-center py-10"><Bell className="w-12 h-12 text-muted-foreground/30 mx-auto mb-2" /><p className="text-sm text-muted-foreground">No notifications</p></div>
+              ) : (
+                notifications.map((notification) => (
+                  <div key={notification.notificationId} className={`p-3 border-b border-border last:border-0 hover:bg-muted/30 transition-colors ${notification.isRead ? 'opacity-60' : ''}`}>
+                    <button type="button" onClick={() => handleOpenNotification(notification)} className="min-w-0 w-full text-left mb-2">
+                      <p className="text-sm font-medium text-foreground truncate">{notification.title || 'Notification'}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">{notification.body || ''}</p>
+                      <p className="text-[10px] text-muted-foreground/60 mt-1">{notification.createdAt ? new Date(notification.createdAt).toLocaleString() : ''}</p>
+                    </button>
+                    <div className="flex items-center justify-end gap-1">
+                      <button type="button" onClick={() => handleOpenNotification(notification)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                        <Eye className="w-3 h-3" />
+                        View
+                      </button>
+                      {!notification.isRead && (
+                        <button type="button" onClick={() => handleMarkAsRead(notification.notificationId)} className="inline-flex items-center gap-1 rounded-md border border-border px-2 py-1 text-[10px] font-medium text-muted-foreground hover:bg-muted hover:text-foreground transition-colors">
+                          <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" /></svg>
+                          Read
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </>
+      )}
       {showLogoutConfirm && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 p-4 backdrop-blur-sm" onClick={() => setShowLogoutConfirm(false)}>
           <div className="w-full max-w-md rounded-2xl border border-border bg-popover p-6 shadow-2xl" onClick={e => e.stopPropagation()}>

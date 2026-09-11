@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { authService } from '../services/auth'
+import { tokenRefreshManager } from '../services/tokenRefresh'
 import type { AuthState } from '../types/auth'
 import { AuthContext, type AuthContextType } from './AuthContextType'
 import {
@@ -25,6 +26,28 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     console.log('AuthContext: Checking authentication status on app load')
     checkAuthStatus()
   }, []) // Empty dependency array is correct here
+
+  useEffect(() => {
+    // Start token refresh monitoring when user is authenticated
+    if (state.isAuthenticated) {
+      tokenRefreshManager.startMonitoring()
+
+      // Re-check token when user returns to tab (handles background tab throttling)
+      const handleVisibilityChange = () => {
+        if (document.visibilityState === 'visible') {
+          tokenRefreshManager.startMonitoring()
+        }
+      }
+
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+
+      // Cleanup on unmount or when user logs out
+      return () => {
+        tokenRefreshManager.stopMonitoring()
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+      }
+    }
+  }, [state.isAuthenticated])
 
   const checkAuthStatus = async () => {
     try {

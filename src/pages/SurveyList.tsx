@@ -102,6 +102,12 @@ const SurveyList: React.FC = () => {
   const handleStartSurvey = async (survey: SurveyWithStatus) => {
     if (!user || !selectedStoreId) return
 
+    // Only allow starting survey for today's date
+    if (surveyDate !== today) {
+      toast.error('Surveys can only be started for today\'s date')
+      return
+    }
+
     try {
       const response = await taskService.createSurveySubmission({
         surveyId: survey.surveyId,
@@ -123,7 +129,10 @@ const SurveyList: React.FC = () => {
 
   // Handle continue survey
   const handleContinueSurvey = (dailySurveyId: number) => {
-    navigate(`/survey/${dailySurveyId}`)
+    // Allow viewing historical surveys, but only continue for today's date
+    navigate(`/survey/${dailySurveyId}`, { 
+      state: { viewOnly: surveyDate !== today }
+    })
   }
 
   // Get selected store details
@@ -305,7 +314,13 @@ const SurveyList: React.FC = () => {
                   userCanStartSurvey ? (
                     <button
                       onClick={() => handleStartSurvey(survey)}
-                      className="mt-6 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                      disabled={surveyDate !== today}
+                      className={`mt-6 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        surveyDate === today
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'bg-muted text-muted-foreground cursor-not-allowed'
+                      }`}
+                      title={surveyDate !== today ? 'Surveys can only be started for today\'s date' : 'Start Survey'}
                     >
                       <PlayCircle className="h-4 w-4" />
                       Start Survey
@@ -326,7 +341,7 @@ const SurveyList: React.FC = () => {
                     className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                   >
                     <Eye className="h-4 w-4" />
-                    {userCanStartSurvey ? 'Continue Survey' : 'View Survey'}
+                    {surveyDate === today && userCanStartSurvey ? 'Continue Survey' : 'View Survey'}
                   </button>
                 )}
               </div>

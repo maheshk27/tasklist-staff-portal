@@ -1,7 +1,8 @@
-import { Routes, Route, useLocation } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
 import { useEffect } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { Toaster } from 'react-hot-toast'
+import { useAuth } from './hooks/useAuth'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/layout/Layout'
 import Login from './modules/auth/pages/Login'
@@ -23,6 +24,41 @@ import SurveyEntryPage from './pages/SurveyEntry'
 import LoginLogs from './pages/LoginLogs'
 import NotFound from './pages/NotFound'
 
+// Redirect authenticated users to dashboard
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/30 flex items-center justify-center  text-center">
+        <div className="flex flex-col items-center gap-6">
+          <img 
+            src="/rk-logo.png" 
+            alt="RK Bazar Logo" 
+            className="w-80 object-contain"
+          />
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Task Management Workflow
+            </h1>
+            <p className="font-semibold text-primary">Staff Portal</p>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <>{children}</>
+}
+
 // Scroll to top on route change
 const ScrollToTop: React.FC = () => {
   const { pathname } = useLocation()
@@ -41,8 +77,8 @@ function App() {
       <ScrollToTop />
       <Routes>
         {/* Public routes without layout */}
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* Protected routes with layout */}

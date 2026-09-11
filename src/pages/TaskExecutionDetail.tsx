@@ -54,6 +54,11 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
   // Checklist sort (default: FromTime ASC — single dropdown combines key + direction)
   const [checklistSort, setChecklistSort] = useState<string>('fromTime-asc')
 
+  // Date check - only allow actions on today's date
+  const today = new Date().toLocaleDateString('en-CA')
+  const isTodayTask = taskExecution?.executionDate === today
+  const isActionAllowed = !readOnly && isTodayTask
+
   // Fetch task execution
   useEffect(() => {
     if (!taskExecutionId) return
@@ -672,7 +677,7 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
           {/* Action + Timeline side by side (1 col mobile, 2 cols sm+) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Action section — hide when there are checklist items or readOnly */}
-            {!readOnly && (!checklistExecutions || checklistExecutions.length === 0) && (
+            {isActionAllowed && (!checklistExecutions || checklistExecutions.length === 0) && (
               <div className="h-full rounded-xl border border-border p-4">
                 {taskExecution.executionStatus === 'NOT_STARTED' && (
                   <div className="text-center">
@@ -753,6 +758,25 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
                     )}
                   </div>
                 )}
+              </div>
+            )}
+
+            {/* Historical task notice */}
+            {!readOnly && !isTodayTask && (
+              <div className="h-full rounded-xl border border-border p-4">
+                <div className="text-center">
+                  <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                    <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                  </div>
+                  <p className="text-sm text-muted-foreground mb-1">
+                    This is a historical task.
+                  </p>
+                  <p className="text-xs text-muted-foreground">
+                    Actions can only be performed on today's tasks.
+                  </p>
+                </div>
               </div>
             )}
             {/* Timeline section — vertical stepper, responsive */}
@@ -839,8 +863,8 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
         </div>
       </div>
 
-      {/* ==== Complete Confirmation Modal — hidden when readOnly ==== */}
-      {!readOnly && showCompleteConfirm && (
+      {/* ==== Complete Confirmation Modal — hidden when readOnly or historical ==== */}
+      {isActionAllowed && showCompleteConfirm && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setShowCompleteConfirm(false)}

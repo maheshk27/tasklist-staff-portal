@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { taskService } from '../services/apiManager'
 import type { SurveyEntry } from '../types/daily-survey'
 import toast from 'react-hot-toast'
@@ -12,11 +12,16 @@ import { canStartSurvey } from '../utils/surveyPermission'
 const SurveyEntryPage: React.FC = () => {
   const { dailySurveyId } = useParams<{ dailySurveyId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const { user } = useAuth()
 
   // Permission: only BM/ABM/ABM(OTL)/STL/OTL roles can start/update surveys.
   // Others can only view.
   const userCanStartSurvey = canStartSurvey(user?.role?.roleName)
+
+  // Check if viewing historical survey (not today's date)
+  const today = new Date().toLocaleDateString('en-CA')
+  const viewOnlyFromNav = location.state?.viewOnly === true
 
   const [entries, setEntries] = useState<SurveyEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -34,6 +39,12 @@ const SurveyEntryPage: React.FC = () => {
     surveyName?: string
     surveyDays?: string[]
   } | null>(null)
+
+  // Determine if survey is for today's date
+  const isTodaySurvey = submissionDetails?.surveyDate === today
+  
+  // Combined view-only mode: from navigation state OR historical survey OR no permission
+  const isViewOnly = viewOnlyFromNav || !isTodaySurvey || !userCanStartSurvey
 
   // Local form data for each entry
   const [formData, setFormData] = useState<Record<number, {
@@ -224,15 +235,18 @@ const SurveyEntryPage: React.FC = () => {
         subtitle=""
       />
 
-      {/* View-Only Notice for non-privileged roles */}
-      {!userCanStartSurvey && (
+      {/* View-Only Notice for non-privileged roles or historical surveys */}
+      {isViewOnly && (
         <div className="flex items-start gap-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
           <Eye className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
           <div>
             <p className="text-sm font-medium text-blue-800">View-Only Mode</p>
             <p className="text-sm text-blue-700 mt-0.5">
-              Your role does not have permission to start or update this survey.
-              You can only view the survey details.
+              {!userCanStartSurvey
+                ? 'Your role does not have permission to start or update this survey. You can only view the survey details.'
+                : !isTodaySurvey
+                  ? 'This is a historical survey. You can only view the survey details.'
+                  : 'You can only view the survey details.'}
             </p>
           </div>
         </div>
@@ -365,7 +379,7 @@ const SurveyEntryPage: React.FC = () => {
                       {/* <span className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center text-xs font-semibold text-primary">
                         {index + 1}
                       </span> */}
-                      <div className="text-md text-foreground font-medium">
+                      <div className="text-sm text-foreground font-semibold">
                         {(entry as any).surveyItemName || `Item #${entry.surveyItemId}`}
                       </div>
                     </div>
@@ -385,8 +399,8 @@ const SurveyEntryPage: React.FC = () => {
                       min="0"
                       value={data.stockOutCount}
                       onChange={(e) => handleInputChange(entry.surveyEntryId, 'stockOutCount', parseInt(e.target.value) || 0)}
-                      disabled={!userCanStartSurvey}
-                      className={`w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${!userCanStartSurvey ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      disabled={isViewOnly}
+                      className={`w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${isViewOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder="Enter stock out count"
                     />
                   </div>
@@ -396,13 +410,13 @@ const SurveyEntryPage: React.FC = () => {
                     <label className="block text-sm font-medium text-foreground mb-2">Rack Clean</label>
                     <div className="flex gap-3">
                       <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isRackClean ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
-                        } ${!userCanStartSurvey ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`rackClean-${entry.surveyEntryId}`}
                           checked={data.isRackClean === true}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isRackClean', true)}
-                          disabled={!userCanStartSurvey}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isRackClean ? 'text-green-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -411,13 +425,13 @@ const SurveyEntryPage: React.FC = () => {
                         <span className="text-sm font-medium">Yes</span>
                       </label>
                       <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isRackClean === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
-                        } ${!userCanStartSurvey ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`rackClean-${entry.surveyEntryId}`}
                           checked={data.isRackClean === false}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isRackClean', false)}
-                          disabled={!userCanStartSurvey}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isRackClean === false ? 'text-red-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -433,13 +447,13 @@ const SurveyEntryPage: React.FC = () => {
                     <label className="block text-sm font-medium text-foreground mb-2">Board Available</label>
                     <div className="flex gap-3">
                       <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isBoardAvailable ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
-                        } ${!userCanStartSurvey ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`boardAvailable-${entry.surveyEntryId}`}
                           checked={data.isBoardAvailable === true}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isBoardAvailable', true)}
-                          disabled={!userCanStartSurvey}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isBoardAvailable ? 'text-green-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -448,13 +462,13 @@ const SurveyEntryPage: React.FC = () => {
                         <span className="text-sm font-medium">Yes</span>
                       </label>
                       <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isBoardAvailable === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
-                        } ${!userCanStartSurvey ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`boardAvailable-${entry.surveyEntryId}`}
                           checked={data.isBoardAvailable === false}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isBoardAvailable', false)}
-                          disabled={!userCanStartSurvey}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isBoardAvailable === false ? 'text-red-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -466,19 +480,18 @@ const SurveyEntryPage: React.FC = () => {
                   </div>
 
                   {/* Entry Status */}
-                  {/* {['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'SKIPPED'] */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Status</label>
                     <div className="grid grid-cols-2 gap-3">
                       {['IN_PROGRESS', 'COMPLETED'].map(status => (
                         <label key={status} className={`p-2 border text-center rounded-lg transition-colors ${data.entryStatus === status ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted/50'
-                          } ${!userCanStartSurvey ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
+                          } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                           <input
                             type="radio"
                             name={`entryStatus-${entry.surveyEntryId}`}
                             checked={data.entryStatus === status}
                             onChange={() => handleInputChange(entry.surveyEntryId, 'entryStatus', status)}
-                            disabled={!userCanStartSurvey}
+                            disabled={isViewOnly}
                             className="sr-only"
                           />
                           <span className="text-sm font-medium">{status == "IN_PROGRESS" ? 'In Progess' : 'Completed'}</span>
@@ -495,8 +508,8 @@ const SurveyEntryPage: React.FC = () => {
                     <textarea
                       value={data.actionTaken}
                       onChange={(e) => handleInputChange(entry.surveyEntryId, 'actionTaken', e.target.value)}
-                      readOnly={!userCanStartSurvey}
-                      className={`w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none ${!userCanStartSurvey ? 'opacity-60 cursor-not-allowed' : ''}`}
+                      readOnly={isViewOnly}
+                      className={`w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none ${isViewOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       rows={2}
                       placeholder="Enter action taken (optional)"
                     />
@@ -512,7 +525,7 @@ const SurveyEntryPage: React.FC = () => {
                   }
 
                   {/* Submit Button */}
-                  {!userCanStartSurvey ? (
+                  {isViewOnly ? (
                     <div className="w-full px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium text-center cursor-not-allowed">
                       View Only — cannot update entries
                     </div>

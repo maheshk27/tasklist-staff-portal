@@ -38,8 +38,10 @@ const MyTasks: React.FC = () => {
   const [isLoadingStores, setIsLoadingStores] = useState(true)
   const [storesError, setStoresError] = useState<string | null>(null)
 
+  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
+
   // ── Date (determines data source: today vs historical) ───────────────────────
-  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [selectedDate, setSelectedDate] = useState<string>(today)
 
   // ── View mode ─────────────────────────────────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -56,8 +58,6 @@ const MyTasks: React.FC = () => {
   const [isLoadingTasks, setIsLoadingTasks] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
 
-  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
-  
   // ── Fetch assigned stores on mount ───────────────────────────────────────────
   useEffect(() => {
     let cancelled = false

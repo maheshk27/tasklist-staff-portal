@@ -51,10 +51,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
   const checkAuthStatus = async () => {
     try {
-      const { accessToken } = authService.getStoredTokens()
+      const { accessToken, refreshToken } = authService.getStoredTokens()
       
       if (accessToken && !authService.isTokenExpired()) {
-        // Token is valid, get user info
+        // Access token is valid, get user info
         // Prefer the full user details persisted in localStorage on login (they
         // contain the complete profile); fall back to the JWT-decoded user.
         let user = getStoredUserDetails()
@@ -72,7 +72,50 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             isLoading: false,
           }))
         } else {
-          // Token is invalid, clear it
+          // No user info available, clear tokens
+          authService.clearTokens()
+          clearStoredUserDetails()
+          setState(prev => ({
+            ...prev,
+            user: null,
+            isAuthenticated: false,
+            isLoading: false,
+          }))
+        }
+      } else if (refreshToken) {
+        // Access token expired or missing, but refresh token exists - try to refresh
+        console.log('AuthContext: Access token expired, attempting refresh...')
+        try {
+          const response = await authService.refreshToken(refreshToken)
+          
+          if (response.success && response.data) {
+            // Refresh successful - store new tokens
+            const { accessToken: newAccessToken, refreshToken: newRefreshToken, user } = response.data
+            authService.setTokens(newAccessToken, newRefreshToken)
+            storeUserDetails(user)
+            
+            console.log('AuthContext: Token refresh successful')
+            setState(prev => ({
+              ...prev,
+              user,
+              isAuthenticated: true,
+              isLoading: false,
+            }))
+          } else {
+            // Refresh failed - clear tokens
+            console.log('AuthContext: Token refresh failed - invalid response')
+            authService.clearTokens()
+            clearStoredUserDetails()
+            setState(prev => ({
+              ...prev,
+              user: null,
+              isAuthenticated: false,
+              isLoading: false,
+            }))
+          }
+        } catch (refreshError) {
+          // Refresh failed - clear tokens and show login
+          console.error('AuthContext: Token refresh failed:', refreshError)
           authService.clearTokens()
           clearStoredUserDetails()
           setState(prev => ({
@@ -83,7 +126,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           }))
         }
       } else {
-        // No valid token — also clear any stale user details
+        // No valid tokens - user needs to login
         clearStoredUserDetails()
         setState(prev => ({
           ...prev,

@@ -116,6 +116,14 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   const isLocked = checklistExecution?.checklistStatus === 'COMPLETED' || readOnly
   const isReadOnly = checklistExecution?.checklistStatus !== 'IN_PROGRESS' || readOnly
 
+  // Date check - only allow actions on today's date
+  const today = new Date().toLocaleDateString('en-CA')
+  const executionDate = checklistExecution?.fromTime
+    ? new Date(checklistExecution.fromTime).toLocaleDateString('en-CA')
+    : null
+  const isTodayChecklist = executionDate === today
+  const isActionAllowed = !readOnly && isTodayChecklist && checklistExecution?.checklistStatus === 'IN_PROGRESS'
+
   // Get current userId from token
   const getCurrentUserId = (): number | null => {
     const { accessToken } = getStoredTokens()
@@ -319,39 +327,57 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
           <div className="flex flex-col sm:flex-row gap-3 justify-end">
             {checklistExecution?.checklistStatus === 'NOT_STARTED' && (
               <>
-                {isTimeToStart(checklistExecution.fromTime) ? (
-                  <ActionButton
-                    action="signin"
-                    layout="grid"
-                    title="Start Task"
-                    onClick={handleStartTask}
-                    disabled={isStarting}
-                  />
+                {isTodayChecklist ? (
+                  isTimeToStart(checklistExecution.fromTime) ? (
+                    <ActionButton
+                      action="signin"
+                      layout="grid"
+                      title="Start Task"
+                      onClick={handleStartTask}
+                      disabled={isStarting}
+                    />
+                  ) : (
+                    <ActionButton
+                      action="signin"
+                      layout="grid"
+                      title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                      disabled={true}
+                    />
+                  )
                 ) : (
-                  <ActionButton
-                    action="signin"
-                    layout="grid"
-                    title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
-                    disabled={true}
-                  />
+                  <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                    <span className="text-sm text-yellow-700">Historical checklist - actions not allowed</span>
+                  </div>
                 )}
               </>
             )}
 
             {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
-              <ActionButton
-                action="activate"
-                layout="grid"
-                title="Complete Task"
-                onClick={() => {
-                  if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
-                    toast.error('Please upload the required evidence before completing this checklist.')
-                    return
-                  }
-                  setShowCompleteConfirm(true)
-                }}
-                disabled={isCompleting}
-              />
+              isTodayChecklist ? (
+                <ActionButton
+                  action="activate"
+                  layout="grid"
+                  title="Complete Task"
+                  onClick={() => {
+                    if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                      toast.error('Please upload the required evidence before completing this checklist.')
+                      return
+                    }
+                    setShowCompleteConfirm(true)
+                  }}
+                  disabled={isCompleting}
+                />
+              ) : (
+                <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <span className="text-sm text-yellow-700">Historical checklist - actions not allowed</span>
+                </div>
+              )
             )}
           </div>
       )}
@@ -437,8 +463,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
               </h2>
             </div>
 
-            {/* Upload buttons — only when in_progress and not readOnly */}
-            {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
+            {/* Upload buttons — only when in_progress, not readOnly, and today's checklist */}
+            {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && isTodayChecklist && (
               <div className="flex items-center gap-2">
                 {isPhotoUpload ? (
                   <>
@@ -590,33 +616,44 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                     <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
                       <Hourglass className="h-7 w-7" />
                     </div>
-                    {isTimeToStart(checklistExecution.fromTime) ? (
-                      <>
-                        <p className="text-sm text-muted-foreground mb-4">
-                          This checklist is pending. Start it to begin working.
-                        </p>
-                        <ActionButton
-                          action="signin"
-                          layout="grid"
-                          title="Start Task"
-                          onClick={handleStartTask}
-                          disabled={isStarting}
-                        />
-                      </>
+                    {isTodayChecklist ? (
+                      isTimeToStart(checklistExecution.fromTime) ? (
+                        <>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            This checklist is pending. Start it to begin working.
+                          </p>
+                          <ActionButton
+                            action="signin"
+                            layout="grid"
+                            title="Start Task"
+                            onClick={handleStartTask}
+                            disabled={isStarting}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-orange-500 font-medium mb-1">
+                            Checklist starts at {formatTime(checklistExecution.fromTime)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-4">
+                            Please wait until the scheduled start time to begin.
+                          </p>
+                          <ActionButton
+                            action="signin"
+                            layout="grid"
+                            title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                            disabled={true}
+                          />
+                        </>
+                      )
                     ) : (
                       <>
-                        <p className="text-sm text-orange-500 font-medium mb-1">
-                          Checklist starts at {formatTime(checklistExecution.fromTime)}
+                        <p className="text-sm text-muted-foreground mb-1">
+                          This is a historical checklist.
                         </p>
-                        <p className="text-xs text-muted-foreground mb-4">
-                          Please wait until the scheduled start time to begin.
+                        <p className="text-xs text-muted-foreground">
+                          Actions can only be performed on today's checklists.
                         </p>
-                        <ActionButton
-                          action="signin"
-                          layout="grid"
-                          title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
-                          disabled={true}
-                        />
                       </>
                     )}
                   </div>
@@ -624,30 +661,48 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
                 {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
                   <div className="text-center">
-                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
-                      <PlayCircle className="h-7 w-7" />
-                    </div>
-                    <p className="text-sm text-muted-foreground mb-1">
-                      Task is in {checklistExecution?.checklistStatus === 'IN_PROGRESS' ? 'progress' : 'overdue'}.
-                    </p>
-                    {checklistExecution.startedAt && (
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Started at: {formatDateTime(checklistExecution.startedAt)}
-                      </p>
+                    {isTodayChecklist ? (
+                      <>
+                        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                          <PlayCircle className="h-7 w-7" />
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Task is in {checklistExecution?.checklistStatus === 'IN_PROGRESS' ? 'progress' : 'overdue'}.
+                        </p>
+                        {checklistExecution.startedAt && (
+                          <p className="text-xs text-muted-foreground mb-4">
+                            Started at: {formatDateTime(checklistExecution.startedAt)}
+                          </p>
+                        )}
+                        <ActionButton
+                          action="activate"
+                          layout="grid"
+                          title="Complete Task"
+                          onClick={() => {
+                            if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                              toast.error('Please upload the required evidence before completing this checklist.')
+                              return
+                            }
+                            setShowCompleteConfirm(true)
+                          }}
+                          disabled={isCompleting}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          This is a historical checklist.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Actions can only be performed on today's checklists.
+                        </p>
+                      </>
                     )}
-                    <ActionButton
-                      action="activate"
-                      layout="grid"
-                      title="Complete Task"
-                      onClick={() => {
-                        if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
-                          toast.error('Please upload the required evidence before completing this checklist.')
-                          return
-                        }
-                        setShowCompleteConfirm(true)
-                      }}
-                      disabled={isCompleting}
-                    />
                   </div>
                 )}
 
@@ -802,8 +857,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
         </div>
       </div>
 
-      {/* ==== Complete Confirmation Modal — hidden when readOnly */}
-      {!readOnly && showCompleteConfirm && (
+      {/* ==== Complete Confirmation Modal — hidden when readOnly or historical ==== */}
+      {isActionAllowed && showCompleteConfirm && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setShowCompleteConfirm(false)}

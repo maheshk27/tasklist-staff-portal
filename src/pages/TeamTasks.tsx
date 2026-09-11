@@ -45,8 +45,10 @@ const TeamTasks: React.FC = () => {
   const [isLoadingStoreUsers, setIsLoadingStoreUsers] = useState(false)
   const [storeUsersError, setStoreUsersError] = useState<string | null>(null)
 
+  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
+
   // ── Date (determines data source: today vs historical) ───────────────────────
-  const [selectedDate, setSelectedDate] = useState<string>('')
+  const [selectedDate, setSelectedDate] = useState<string>(today)
 
   // ── View mode ─────────────────────────────────────────────────────────────────
   const [viewMode, setViewMode] = useState<ViewMode>('grid')
@@ -63,8 +65,6 @@ const TeamTasks: React.FC = () => {
   const [isLoadingTasks, setIsLoadingTasks] = useState(false)
   const [tasksError, setTasksError] = useState<string | null>(null)
 
-  const today = new Date().toLocaleDateString('en-CA') // Format as YYYY-MM-DD for input[type=date]
-  
   // ── Check user role - only AREA MANAGER / BRANCH MANAGER / GM can access ─────
   useEffect(() => {
     if (!user || (user.role?.roleName?.toUpperCase() !== 'AREA MANAGER (AM)'

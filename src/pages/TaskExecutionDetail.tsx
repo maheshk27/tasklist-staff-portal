@@ -18,6 +18,8 @@ import ChecklistCard from '../components/ChecklistCard'
 import StatusSummaryCard, { CHECKLIST_STATUS_ICONS } from '../components/StatusSummaryCard'
 import { getPriorityColor } from '../utils/priority'
 import { formatDate, formatDateTime, formatTime, isTimeToStart } from '../utils/date'
+import { getTaskDelayNote } from '../utils/execution-delay'
+import { DelayNote } from '../components/BaseCard'
 
 type ViewMode = 'grid' | 'kanban' | 'table'
 
@@ -205,6 +207,8 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
   const status = taskExecution.executionStatus as TaskExecutionStatus
   const statusColorClass = TASK_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800'
   const statusLabel = TASK_STATUS_LABELS[status] || taskExecution.executionStatus
+  const taskDelayNote = getTaskDelayNote(taskExecution)
+  const hasAssignee = Boolean(taskExecution.user || taskExecution.store)
 
   // Checklists filtered by status (if filter active)
   const filteredChecklists = checklistStatusFilter
@@ -674,6 +678,9 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
           <h2 className="text-base font-semibold text-foreground">Activity</h2>
         </div>
         <div className="p-4">
+          {/* Delay / completed-late warning */}
+          {taskDelayNote && <div className="mb-4"><DelayNote text={taskDelayNote} /></div>}
+
           {/* Action + Timeline side by side (1 col mobile, 2 cols sm+) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Action section — hide when there are checklist items or readOnly */}
@@ -837,9 +844,50 @@ const TaskExecutionDetail: React.FC<TaskExecutionDetailProps> = ({ readOnly = fa
             </div>
           </div>
 
+          {/* Assignee Details */}
+          {(taskExecution.user || taskExecution.store) && (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Assignee Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {taskExecution.user && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                      <UserRound className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {taskExecution.user.firstName} {taskExecution.user.lastName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        @{taskExecution.user.userName}
+                        {taskExecution.user.emailId ? ` · ${taskExecution.user.emailId}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {taskExecution.store && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <StoreIcon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {taskExecution.store.storeName} ({taskExecution.store.storeCode})
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {[taskExecution.store.city, taskExecution.store.state].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
           {/* Completed By section */}
           {taskExecution.completedByUser && (
-            <div>
+            <div className={hasAssignee ? 'mt-4 border-t border-border pt-4' : ''}>
               <h3 className="text-sm font-semibold text-foreground mb-3">Completed By</h3>
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">

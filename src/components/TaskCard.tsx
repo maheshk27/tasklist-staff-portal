@@ -1,6 +1,7 @@
 import React from 'react'
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import { TASK_STATUS_COLORS, TASK_STATUS_LABELS } from '../types/task-execution'
+import { getTaskDelayNote } from '../utils/execution-delay'
 import BaseCard, { ArrowButton, StatusChip, InfoRow } from './BaseCard'
 
 export interface TaskCardProps {
@@ -29,6 +30,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
   const statusColorClass = TASK_STATUS_COLORS[status] || 'bg-gray-100 text-gray-800'
   const statusLabel = TASK_STATUS_LABELS[status] || task.executionStatus
   const title = task.mstTask?.title || `Task #${task.mstTaskId}`
+  const delayNote = getTaskDelayNote(task)
 
   const footer = (
     <div className="flex items-start justify-between gap-2">
@@ -83,6 +85,7 @@ const TaskCard: React.FC<TaskCardProps> = ({
       onClick={() => onClick(task)}
       className={className}
       footer={footer}
+      delayNote={delayNote}
     >
       {extraDetails}
     </BaseCard>

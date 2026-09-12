@@ -106,3 +106,51 @@ export function isTimeToStart(fromTimeString?: string | Date | null): boolean {
   const now = new Date();
   return now >= fromTime;
 }
+
+/**
+ * Compute the number of whole minutes that `reference` (defaults to "now") is past `target`.
+ * Used to surface "Delayed by X Minutes" on not-started items and "Completed by X Minutes"
+ * for items completed after their scheduled end time.
+ *
+ * Both values are treated as UTC timestamps (from_time/to_time/completed_at are
+ * `timestamptz` on the backend). Returns `null` when `target` is missing/invalid or has
+ * not yet been reached (less than a full minute has elapsed).
+ *
+ * @param target - The scheduled start/end time (e.g. fromTime/toTime)
+ * @param reference - The reference instant, defaults to current time
+ * @returns elapsed whole minutes past `target`, or null when not reached
+ */
+export function getMinutesPast(
+  target?: string | Date | null,
+  reference: string | Date = new Date(),
+): number | null {
+  if (!target) return null;
+  const targetDate = new Date(target);
+  const referenceDate = new Date(reference);
+  if (isNaN(targetDate.getTime()) || isNaN(referenceDate.getTime())) return null;
+
+  const diffMinutes = Math.floor((referenceDate.getTime() - targetDate.getTime()) / 60000);
+  return diffMinutes > 0 ? diffMinutes : null;
+}
+
+/**
+ * Format a minute count as a human-readable duration string.
+ * e.g. 20 -> "20 Minutes", 90 -> "1 Hour 30 Minutes", 2900 -> "2 Days 10 Minutes"
+ * @param minutes - duration in minutes
+ * @returns formatted duration string
+ */
+export function formatDuration(minutes: number): string {
+  const total = Math.max(1, Math.round(minutes));
+  if (total < 60) return `${total} Minute${total === 1 ? '' : 's'}`;
+
+  const days = Math.floor(total / 1440);
+  const hours = Math.floor((total % 1440) / 60);
+  const remainingMinutes = total % 60;
+
+  const parts: string[] = [];
+  if (days > 0) parts.push(`${days} Day${days === 1 ? '' : 's'}`);
+  if (hours > 0) parts.push(`${hours} Hour${hours === 1 ? '' : 's'}`);
+  if (remainingMinutes > 0) parts.push(`${remainingMinutes} Minute${remainingMinutes === 1 ? '' : 's'}`);
+
+  return parts.join(' ');
+}

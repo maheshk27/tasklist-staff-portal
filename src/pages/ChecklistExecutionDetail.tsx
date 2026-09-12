@@ -16,17 +16,22 @@ import {
   FileText,
   ShieldCheck,
   Flag,
+  StoreIcon,
+  UserRound,
 } from 'lucide-react'
 import { taskService } from '../services/apiManager'
 import { decodeToken, getStoredTokens } from '../utils/auth'
 import type { TaskChecklistExecution, ChecklistStatus } from '../types/task-checklist-execution'
 import { CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS, CHECKLIST_PRIORITY_LABELS } from '../types/task-checklist-execution'
+import type { TaskExecution } from '../types/task-execution'
 import type { EvidenceResponseDto } from '../types/evidence'
 import { getEvidenceFileIcon, isImageFile } from '../types/evidence'
 import { ActionButton } from '../components/ui/ActionButton'
 import PageHeader from '../components/PageHeader'
 import { getPriorityColor } from '../utils/priority'
 import { formatDateTime, formatTime, isTimeToStart } from '../utils/date'
+import { getChecklistDelayNote } from '../utils/execution-delay'
+import { DelayNote } from '../components/BaseCard'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
@@ -71,6 +76,9 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   // Delete evidence confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
 
+  // Parent task execution — used for assignee details in the Activity card
+  const [parentTask, setParentTask] = useState<TaskExecution | null>(null)
+
   // Fetch checklist execution
   const fetchChecklistExecution = useCallback(async () => {
     if (!checklistExecutionId) return
@@ -112,6 +120,18 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   useEffect(() => {
     fetchEvidence()
   }, [fetchEvidence])
+
+  // Fetch parent task execution for assignee details (the checklist response does not include it)
+  useEffect(() => {
+    if (!taskExecutionId) return
+    let cancelled = false
+    taskService.getTaskExecution(Number(taskExecutionId))
+      .then((res) => {
+        if (!cancelled && res.data) setParentTask(res.data)
+      })
+      .catch(() => { /* assignee details are optional — skip silently */ })
+    return () => { cancelled = true }
+  }, [taskExecutionId])
 
   const isLocked = checklistExecution?.checklistStatus === 'COMPLETED' || readOnly
   const isReadOnly = checklistExecution?.checklistStatus !== 'IN_PROGRESS' || readOnly
@@ -306,6 +326,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   const isPhotoUpload = uploadType === 'PHOTO'
   const checklistStatusColor = CHECKLIST_STATUS_COLORS[checklistExecution.checklistStatus] || 'bg-gray-100 text-gray-800'
   const checklistStatusLabel = CHECKLIST_STATUS_LABELS[checklistExecution.checklistStatus] || checklistExecution.checklistStatus
+  const checklistDelayNote = getChecklistDelayNote(checklistExecution)
 
   return (
     <div className="space-y-6">
@@ -430,7 +451,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
           {/* Badges — mandatory, priority, status */}
           <div className="flex flex-wrap items-center gap-2">
-            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-0.5 text-sm font-medium ${checklistStatusColor}`}>
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium ${checklistStatusColor}`}>
               {checklistStatusLabel}
             </span>
             {checklistExecution.taskChecklist?.isMandatory && (
@@ -606,6 +627,9 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
           </div>
         </div>
         <div className="p-4">
+          {/* Delay / completed-late warning */}
+          {checklistDelayNote && <div className="mb-4"><DelayNote text={checklistDelayNote} /></div>}
+
           {/* Action + Timeline side by side (1 col mobile, 2 cols sm+) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Action section — hidden when readOnly */}
@@ -784,6 +808,47 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
               })()}
             </div>
           </div>
+
+          {/* Assignee Details */}
+          {(parentTask?.user || parentTask?.store) && (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Assignee Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {parentTask?.user && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                      <UserRound className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {parentTask.user.firstName} {parentTask.user.lastName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        @{parentTask.user.userName}
+                        {parentTask.user.emailId ? ` · ${parentTask.user.emailId}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {parentTask?.store && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <StoreIcon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {parentTask.store.storeName} ({parentTask.store.storeCode})
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {[parentTask.store.city, parentTask.store.state].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
 
           {/* Completed By section */}
           {/* {checklistExecution.completedByUser && (

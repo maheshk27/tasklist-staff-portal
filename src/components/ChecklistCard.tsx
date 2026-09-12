@@ -3,7 +3,8 @@ import type { TaskChecklistExecution, ChecklistStatus, ChecklistPriority } from 
 import { CHECKLIST_PRIORITY_LABELS, CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS } from '../types/task-checklist-execution'
 import { formatDate, formatTime } from '../utils/date'
 import { getPriorityColor } from '../utils/priority'
-import BaseCard, { ArrowButton, InfoRow } from './BaseCard'
+import { getChecklistDelayNote } from '../utils/execution-delay'
+import BaseCard, { ArrowButton, DelayNote, InfoRow } from './BaseCard'
 
 export interface ChecklistCardProps {
   checklist: TaskChecklistExecution
@@ -24,6 +25,7 @@ const ChecklistCard: React.FC<ChecklistCardProps> = ({ checklist: cl, onClick, c
   const statusLabel = CHECKLIST_STATUS_LABELS[checklistStatus]
   const priorityLabel = CHECKLIST_PRIORITY_LABELS[checklistPriority]
   const title = cl.taskChecklist?.title || `Checklist #${cl.mstChecklistId}`
+  const delayNote = getChecklistDelayNote(cl)
 
   const priorityChip = cl.taskChecklist?.priority && (
     <span className={`px-2.5 py-1 text-xs font-medium rounded-full ${getPriorityColor(cl.taskChecklist.priority)}`}>
@@ -65,6 +67,7 @@ const ChecklistCard: React.FC<ChecklistCardProps> = ({ checklist: cl, onClick, c
       </span>
     </div>
   )
+  const delaySection = delayNote && <DelayNote text={delayNote} />
 
   return (
     <BaseCard
@@ -76,6 +79,7 @@ const ChecklistCard: React.FC<ChecklistCardProps> = ({ checklist: cl, onClick, c
       footer={footer}
     >
       {scheduleSection}
+      {delaySection}
       {extraDetails}
     </BaseCard>
   )

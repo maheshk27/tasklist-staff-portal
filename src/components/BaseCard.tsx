@@ -1,5 +1,5 @@
 import React from 'react'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, Clock } from 'lucide-react'
 import { formatDate, formatTime } from '../utils/date'
 
 export interface BaseCardProps {
@@ -23,6 +23,8 @@ export interface BaseCardProps {
   children?: React.ReactNode
   /** Footer content (status + arrow) */
   footer?: React.ReactNode
+  /** Warning note shown under the schedule (e.g. "Task is Delayed by 20 Minutes") */
+  delayNote?: string | null
 }
 
 /**
@@ -41,6 +43,7 @@ const BaseCard: React.FC<BaseCardProps> = ({
   className = '',
   children,
   footer,
+  delayNote,
 }) => {
   const scheduleSection = (fromTime || toTime) && (
     <div className={`flex items-start gap-2 text-sm text-muted-foreground`}>
@@ -73,6 +76,9 @@ const BaseCard: React.FC<BaseCardProps> = ({
         {/* Schedule */}
         {scheduleSection}
 
+        {/* Delay / completed-late warning */}
+        {delayNote && <DelayNote text={delayNote} />}
+
         {/* Additional body content */}
         {children}
 
@@ -89,6 +95,14 @@ const BaseCard: React.FC<BaseCardProps> = ({
     </button>
   )
 }
+
+/** Warning note rendered under the schedule when a task/checklist is delayed or completed late */
+export const DelayNote: React.FC<{ text: string }> = ({ text }) => (
+  <p className="flex items-start gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
+    <Clock className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+    <span>{text}</span>
+  </p>
+)
 
 /** Circular arrow button used in card footers */
 export const ArrowButton: React.FC = () => (

@@ -154,3 +154,54 @@ export function formatDuration(minutes: number): string {
 
   return parts.join(' ');
 }
+
+// Asia/Kolkata (IST) is UTC+05:30 and has no DST, so a fixed offset is safe.
+const IST_OFFSET_MS = (5 * 60 + 30) * 60 * 1000;
+
+/**
+ * Return true when both timestamps fall on the same IST calendar day.
+ * @param a - first timestamp
+ * @param b - second timestamp
+ * @returns true if both are valid and share the same IST date
+ */
+export function isSameISTDay(a: string | Date, b: string | Date): boolean {
+  const aDate = new Date(a);
+  const bDate = new Date(b);
+  if (isNaN(aDate.getTime()) || isNaN(bDate.getTime())) return false;
+
+  const aKey = new Date(aDate.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+  const bKey = new Date(bDate.getTime() + IST_OFFSET_MS).toISOString().slice(0, 10);
+  return aKey === bKey;
+}
+
+/**
+ * Return the end of the IST calendar day that contains `dateTime`,
+ * i.e. 00:00 IST of the following day. Used to cap delay computations for
+ * historical (non-today) items so they don't accumulate multi-day delays.
+ * @param dateTime - a timestamp (e.g. fromTime) whose IST day to find the end of
+ * @returns Date at that IST day's midnight (start of the next IST day)
+ */
+export function endOfISTDay(dateTime: string | Date): Date {
+  const date = new Date(dateTime);
+  const istMs = date.getTime() + IST_OFFSET_MS;
+  const ist = new Date(istMs);
+  const nextMidnightUTC = Date.UTC(ist.getUTCFullYear(), ist.getUTCMonth(), ist.getUTCDate() + 1);
+  return new Date(nextMidnightUTC - IST_OFFSET_MS);
+}
+
+/**
+ * Reference instant used for delay computations:
+ *  - item scheduled for today → current time (`now`)
+ *  - historical item → that execution day's midnight (end of the IST day)
+ * This keeps "Delayed by X" sensible for past days (e.g. up to that day's midnight)
+ * instead of measuring up to the far-side "now".
+ * @param fromTime - scheduled start time (drives which IST day the item belongs to)
+ * @param now - current instant, defaults to new Date()
+ * @returns reference instant for the delay calculation
+ */
+export function getDelayReference(fromTime?: string | Date | null, now: Date = new Date()): Date {
+  if (!fromTime) return now;
+  const fromTimeDate = new Date(fromTime);
+  if (isNaN(fromTimeDate.getTime())) return now;
+  return isSameISTDay(fromTimeDate, now) ? now : endOfISTDay(fromTimeDate);
+}

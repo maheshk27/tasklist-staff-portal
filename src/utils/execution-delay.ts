@@ -9,7 +9,7 @@
  */
 import type { TaskExecution, TaskExecutionStatus } from '../types/task-execution'
 import type { TaskChecklistExecution, ChecklistStatus } from '../types/task-checklist-execution'
-import { formatDuration, getMinutesPast } from './date'
+import { formatDuration, getMinutesPast, getDelayReference } from './date'
 
 /** Build the delay / completed-late warning text for a task. */
 export function getTaskDelayNote(task: TaskExecution): string | null {
@@ -17,13 +17,13 @@ export function getTaskDelayNote(task: TaskExecution): string | null {
 
   // Not started and the scheduled start time has already passed → delayed
   if (status === 'NOT_STARTED') {
-    const minutes = getMinutesPast(task.fromTime)
+    const minutes = getMinutesPast(task.fromTime, getDelayReference(task.fromTime))
     if (minutes !== null) return `Delayed by ${formatDuration(minutes)}`
   }
 
   // In progress but the scheduled end time has already passed → delayed
-  if (status === 'IN_PROGRESS' || status == "OVERDUE") {
-    const minutes = getMinutesPast(task.toTime)
+  if (status === 'IN_PROGRESS' || status === 'OVERDUE') {
+    const minutes = getMinutesPast(task.toTime, getDelayReference(task.fromTime))
     if (minutes !== null) return `Delayed by ${formatDuration(minutes)}`
   }
 
@@ -42,13 +42,13 @@ export function getChecklistDelayNote(cl: TaskChecklistExecution): string | null
 
   // Not started and the scheduled start time has already passed → delayed
   if (status === 'NOT_STARTED') {
-    const minutes = getMinutesPast(cl.fromTime)
+    const minutes = getMinutesPast(cl.fromTime, getDelayReference(cl.fromTime))
     if (minutes !== null) return `Delayed by ${formatDuration(minutes)}`
   }
 
   // In progress but the scheduled end time has already passed → delayed
-  if (status === 'IN_PROGRESS' || status == "OVERDUE") {
-    const minutes = getMinutesPast(cl.toTime)
+  if (status === 'IN_PROGRESS' || status === 'OVERDUE') {
+    const minutes = getMinutesPast(cl.toTime, getDelayReference(cl.fromTime))
     if (minutes !== null) return `Delayed by ${formatDuration(minutes)}`
   }
 

@@ -142,7 +142,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
     ? new Date(checklistExecution.fromTime).toLocaleDateString('en-CA')
     : null
   const isTodayChecklist = executionDate === today
-  const isActionAllowed = !readOnly && isTodayChecklist && checklistExecution?.checklistStatus === 'IN_PROGRESS'
+  const isActionAllowed = !readOnly && isTodayChecklist && (checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE')
 
   // Get current userId from token
   const getCurrentUserId = (): number | null => {

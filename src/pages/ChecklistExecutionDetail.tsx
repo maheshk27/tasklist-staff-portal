@@ -345,52 +345,26 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
       {/* Action Buttons — Start / Complete Task */}
       {!readOnly && (
-          <div className="flex flex-col sm:flex-row gap-3 justify-end">
-            {checklistExecution?.checklistStatus === 'NOT_STARTED' && (
-              <>
-                {isTodayChecklist ? (
-                  isTimeToStart(checklistExecution.fromTime) ? (
-                    <ActionButton
-                      action="signin"
-                      layout="grid"
-                      title="Start Task"
-                      onClick={handleStartTask}
-                      disabled={isStarting}
-                    />
-                  ) : (
-                    <ActionButton
-                      action="signin"
-                      layout="grid"
-                      title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
-                      disabled={true}
-                    />
-                  )
+        <div className="flex flex-col sm:flex-row gap-3 justify-end">
+          {checklistExecution?.checklistStatus === 'NOT_STARTED' && (
+            <>
+              {isTodayChecklist ? (
+                isTimeToStart(checklistExecution.fromTime) ? (
+                  <ActionButton
+                    action="signin"
+                    layout="grid"
+                    title="Start Task"
+                    onClick={handleStartTask}
+                    disabled={isStarting}
+                  />
                 ) : (
-                  <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
-                    <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
-                    </svg>
-                    <span className="text-sm text-yellow-700">Historical checklist - actions not allowed</span>
-                  </div>
-                )}
-              </>
-            )}
-
-            {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
-              isTodayChecklist ? (
-                <ActionButton
-                  action="activate"
-                  layout="grid"
-                  title="Complete Task"
-                  onClick={() => {
-                    if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
-                      toast.error('Please upload the required evidence before completing this checklist.')
-                      return
-                    }
-                    setShowCompleteConfirm(true)
-                  }}
-                  disabled={isCompleting}
-                />
+                  <ActionButton
+                    action="signin"
+                    layout="grid"
+                    title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                    disabled={true}
+                  />
+                )
               ) : (
                 <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
                   <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -398,9 +372,35 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                   </svg>
                   <span className="text-sm text-yellow-700">Historical checklist - actions not allowed</span>
                 </div>
-              )
-            )}
-          </div>
+              )}
+            </>
+          )}
+
+          {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
+            isTodayChecklist ? (
+              <ActionButton
+                action="activate"
+                layout="grid"
+                title="Complete Task"
+                onClick={() => {
+                  if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                    toast.error('Please upload the required evidence before completing this checklist.')
+                    return
+                  }
+                  setShowCompleteConfirm(true)
+                }}
+                disabled={isCompleting}
+              />
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="text-sm text-yellow-700">Historical checklist - actions not allowed</span>
+              </div>
+            )
+          )}
+        </div>
       )}
 
       {/* ==== Checklist Info Card ==== */}
@@ -485,7 +485,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
             </div>
 
             {/* Upload buttons — only when in_progress, not readOnly, and today's checklist */}
-            {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && isTodayChecklist && (
+            {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && !readOnly && isTodayChecklist && (
               <div className="flex items-center gap-2">
                 {isPhotoUpload ? (
                   <>
@@ -536,10 +536,10 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                 <Lock className="h-3.5 w-3.5" />
                 Read-only view
               </span>
-            ) : checklistExecution?.checklistStatus !== 'IN_PROGRESS' && (
+            ) : checklistExecution?.checklistStatus === 'NOT_STARTED' && (
               <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
                 {isLocked ? <Lock className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
-                {isLocked ? 'Locked' : 'Start the task to upload files'}
+                {isLocked ? 'Locked' : 'Start the task to upload evidence files'}
               </span>
             )}
           </div>
@@ -557,7 +557,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                 <p className="text-sm text-muted-foreground">
                   {isLocked ? 'No evidence files were uploaded.' : checklistExecution?.checklistStatus === 'NOT_STARTED' ? 'Start the task to upload evidence files.' : 'No evidence files uploaded yet.'}
                 </p>
-                {checklistExecution?.checklistStatus === 'IN_PROGRESS' && (
+                {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
                   <p className="text-xs text-muted-foreground mt-1">
                     {isPhotoUpload
                       ? 'Click "Camera" to capture a photo or pick an image from your device.'
@@ -601,7 +601,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                     </div>
 
                     {/* Remove button — only when in_progress and not readOnly */}
-                    {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
+                    {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && !readOnly && (
                       <button
                         onClick={() => setDeleteConfirmId(evidence.taskEvidenceId)}
                         className="absolute top-1 right-1 w-8 h-8 bg-destructive/80 text-destructive-foreground rounded-full flex items-center justify-center text-xs"

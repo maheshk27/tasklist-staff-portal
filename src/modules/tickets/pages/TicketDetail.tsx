@@ -6,6 +6,8 @@ import type { TicketResponseDto, TicketCommentResponseDto, CreateTicketCommentDt
 import { formatDate, formatTime } from '../../../utils/date'
 import { ArrowLeft, RotateCcw, CheckCircle, ThumbsUp, Play, Pause, CheckCheck, Pencil } from 'lucide-react'
 
+const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
+
 const TICKET_STATUS_COLORS: Record<string, string> = {
   OPEN: 'bg-blue-100 text-blue-800',
   ACKNOWLEDGED: 'bg-yellow-100 text-yellow-800',
@@ -840,7 +842,7 @@ const TicketDetail: React.FC = () => {
                 </div>
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-border">
                   <button
-                    onClick={() => window.open(attachment.fileUrl, '_blank')}
+                    onClick={() => window.open(`${fileUploadBaseUrl}/${attachment.fileUrl}`, '_blank')}
                     className="flex-1 px-3 py-2 text-xs bg-blue-100 text-blue-800 rounded-lg hover:bg-blue-200 transition-colors text-center font-medium"
                   >
                     👁️ View

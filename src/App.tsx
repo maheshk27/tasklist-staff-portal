@@ -22,6 +22,10 @@ import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
 import SurveyList from './pages/SurveyList'
 import SurveyEntryPage from './pages/SurveyEntry'
 import LoginLogs from './pages/LoginLogs'
+import StoreWiseChecklistCompletion from './modules/reports/pages/StoreWiseChecklistCompletion'
+import StoreWiseChecklistStatus from './modules/reports/pages/StoreWiseChecklistStatus'
+import StoreDateWiseChecklistCompletion from './modules/reports/pages/StoreDateWiseChecklistCompletion'
+import StoreSurveyDateWiseCompletion from './modules/reports/pages/StoreSurveyDateWiseCompletion'
 import NotFound from './pages/NotFound'
 
 // Redirect authenticated users to dashboard
@@ -145,6 +149,28 @@ function App() {
         <Route path="/survey/:dailySurveyId" element={
           <ProtectedRoute>
             <Layout><SurveyEntryPage /></Layout>
+          </ProtectedRoute>
+        } />
+
+        {/* Report routes */}
+        <Route path="/store-wise-checklist-completion" element={
+          <ProtectedRoute>
+            <Layout><StoreWiseChecklistCompletion /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/store-wise-checklist-status" element={
+          <ProtectedRoute>
+            <Layout><StoreWiseChecklistStatus /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/store-date-wise-checklist-completion" element={
+          <ProtectedRoute>
+            <Layout><StoreDateWiseChecklistCompletion /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/store-survey-date-wise-completion" element={
+          <ProtectedRoute>
+            <Layout><StoreSurveyDateWiseCompletion /></Layout>
           </ProtectedRoute>
         } />
 

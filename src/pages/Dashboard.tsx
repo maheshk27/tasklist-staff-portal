@@ -1,6 +1,9 @@
 import React from 'react'
 import { Link } from 'react-router-dom'
 import { useAuth } from '../hooks/useAuth'
+import { useMappedStores } from '../hooks/useMappedStores'
+import TodayStoreChecklistOverview from '../components/dashboard/TodayStoreChecklistOverview'
+import TodayStoreSurveyOverview from '../components/dashboard/TodayStoreSurveyOverview'
 import { CheckSquare, Ticket, FileText, User, Settings, type LucideIcon } from 'lucide-react'
 
 /** Quick action links configuration for the dashboard.
@@ -14,6 +17,10 @@ interface QuickLink {
 
 const Dashboard: React.FC = () => {
   const { user } = useAuth()
+
+  // Stores mapped to the logged-in user — the today's overviews below are scoped
+  // to these stores only (never the full store list).
+  const { storeIds, isLoading: isLoadingStores, error: storesError } = useMappedStores()
 
   // Determine if Team Tasks should be shown (same condition as sidebar)
   const showTeamTasks = user?.role?.roleName?.toUpperCase() === 'AREA MANAGER (AM)' ||
@@ -61,6 +68,18 @@ const Dashboard: React.FC = () => {
           })}
         </div>
       </div>
+
+      {/* Today's store overviews — scoped to the user's mapped stores only */}
+      <TodayStoreChecklistOverview
+        storeIds={storeIds}
+        storesReady={!isLoadingStores}
+        storesError={storesError}
+      />
+      <TodayStoreSurveyOverview
+        storeIds={storeIds}
+        storesReady={!isLoadingStores}
+        storesError={storesError}
+      />
     </div>
   )
 }

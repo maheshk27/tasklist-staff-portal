@@ -37,16 +37,34 @@ const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
 interface ChecklistExecutionDetailProps {
   readOnly?: boolean
+  /** When used as embedded modal content, pass the checklist execution ID as a prop */
+  checklistExecutionIdProp?: number
+  /** Parent task execution ID (page mode reads it from the route instead) */
+  taskExecutionIdProp?: number
+  /** Called when the back/close action is triggered (embedded modal mode) */
+  onClose?: () => void
 }
 
 //type checklistExecution?.checklistStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
 
-const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ readOnly = false }) => {
-  const { taskExecutionId, checklistExecutionId } = useParams<{
+const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({
+  readOnly = false,
+  checklistExecutionIdProp,
+  taskExecutionIdProp,
+  onClose,
+}) => {
+  const params = useParams<{
     taskExecutionId: string
     checklistExecutionId: string
   }>()
   const navigate = useNavigate()
+
+  // Resolve the IDs from props (embedded modal mode) or from the URL params
+  // (page mode). They stay strings so the rest of the component, which parses
+  // them with Number(), works unchanged in both modes.
+  const taskExecutionId = taskExecutionIdProp != null ? String(taskExecutionIdProp) : params.taskExecutionId
+  const checklistExecutionId = checklistExecutionIdProp != null ? String(checklistExecutionIdProp) : params.checklistExecutionId
+  const isModalMode = checklistExecutionIdProp !== undefined
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Checklist state
@@ -274,8 +292,12 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
     setIsUploading(false)
   }
 
-  // Navigate back based on readOnly mode
+  // Navigate back based on readOnly mode (embedded modal mode just closes)
   const goBack = () => {
+    if (isModalMode && onClose) {
+      onClose()
+      return
+    }
     if (readOnly) {
       navigate(taskExecutionId ? `/team-tasks/${taskExecutionId}` : '/team-tasks')
     } else {
@@ -330,18 +352,22 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
   return (
     <div className="space-y-6">
-      {/* Page header (back only) */}
-      <button
-        onClick={goBack}
-        className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
-      >
-        <ChevronLeft className="h-4 w-4" />
-        Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
-      </button>
-      <PageHeader
-        title="Checklist Execution"
-        subtitle="View and manage your assigned checklist"
-      />
+      {/* Page header (back only; hidden when embedded in the reports modal) */}
+      {!isModalMode && (
+        <button
+          onClick={goBack}
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
+        >
+          <ChevronLeft className="h-4 w-4" />
+          Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
+        </button>
+      )}
+      {!isModalMode && (
+        <PageHeader
+          title="Checklist Execution"
+          subtitle="View and manage your assigned checklist"
+        />
+      )}
 
       {/* Action Buttons — Start / Complete Task */}
       {!readOnly && (

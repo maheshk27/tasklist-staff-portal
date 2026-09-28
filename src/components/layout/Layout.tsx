@@ -15,6 +15,9 @@ import {
   User,
   Eye,
   Lock,
+  BarChart3,
+  ListChecks,
+  ClipboardList,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useNotifications'
@@ -123,6 +126,16 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     { title: 'Team Tasks', icon: CheckSquare, path: '/team-tasks' },
     { title: 'Daily Survey', icon: FileText, path: '/survey' },
     { title: 'Tickets', icon: Ticket, path: '/tickets' },
+    {
+      title: 'Reports',
+      icon: BarChart3,
+      children: [
+        { title: 'Store Checklist Completion', icon: ListChecks, path: '/store-wise-checklist-completion' },
+        { title: 'Store Checklist Status', icon: ListChecks, path: '/store-wise-checklist-status' },
+        { title: 'Store Date-Wise Completion', icon: ListChecks, path: '/store-date-wise-checklist-completion' },
+        { title: 'Store Survey Completion', icon: ClipboardList, path: '/store-survey-date-wise-completion' }
+      ]
+    },
     {
       title: 'My Account',
       icon: User,
@@ -284,7 +297,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </header>
       <div className="flex">
-        <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-card transition-all duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-[72px]' : 'w-72'}`}>
+        <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-card transition-all duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-[72px]' : 'w-80'}`}>
           <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-2 py-4' : 'px-3 py-4'}`}>
             <div className="space-y-1">
               {filteredMenuItems.map(item => {

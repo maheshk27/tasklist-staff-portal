@@ -13,7 +13,13 @@ import type { UserStoresResponseDto } from '../types/user-store'
 import type { TaskExecution } from '../types/task-execution'
 import type { TaskChecklistExecution, UpdateTaskChecklistExecutionDto, UpdateTaskExecutionDto } from '../types/task-checklist-execution'
 import type { EvidenceResponseDto } from '../types/evidence'
-import type { SurveyWithStatus, SurveyEntry, CreateSurveySubmissionDto, UpdateSurveyEntryDto } from '../types/daily-survey'
+import type { SurveyWithStatus, SurveyEntry, CreateSurveySubmissionDto, UpdateSurveyEntryDto, DailySurvey } from '../types/daily-survey'
+import type { Role } from '../types/role'
+import type { StoreWiseChecklistCompletionResponse } from '../types/store-wise-checklist-completion'
+import type { StoreWiseChecklistStatusResponse } from '../types/store-wise-checklist-status'
+import type { StoreDateWiseChecklistResponse } from '../types/store-date-wise-checklist-completion'
+import type { TaskChecklist } from '../types/task-checklist'
+import type { StoreSurveyDateWiseResponse } from '../types/store-survey-date-wise-completion'
 
 export interface ApiResponse<T = unknown> {
   success: boolean
@@ -221,6 +227,20 @@ export const onboardingService = {
       throw new Error(errorMessage)
     }
   },
+
+  /**
+   * Get all roles (used by the report "Task Assignment Role" filter).
+   * GET /roles only requires authentication, so staff users can call it too.
+   */
+  async getRoles(): Promise<Role[]> {
+    try {
+      const response = await onboardingApi.get<ApiResponse<Role[]>>('/roles')
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch roles'
+      throw new Error(errorMessage)
+    }
+  },
 }
 
 export interface StoreUserDetail {
@@ -272,6 +292,36 @@ export interface StoreUsersDto {
 }
 
 export const taskService = {
+  /**
+   * Get all task checklists (master checklist catalogue).
+   * Used by the reports' optional "Checklist" filter; the endpoint only
+   * requires authentication, so staff users can call it too.
+   */
+  async getTaskChecklists(): Promise<TaskChecklist[]> {
+    try {
+      const response = await taskApi.get<ApiResponse<TaskChecklist[]>>('/task-checklists')
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch task checklists'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get all daily surveys (master survey catalogue).
+   * Used by the reports' "Survey" filter; the endpoint only requires
+   * authentication, so staff users can call it too.
+   */
+  async getDailySurveys(): Promise<DailySurvey[]> {
+    try {
+      const response = await taskApi.get<ApiResponse<DailySurvey[]>>('/daily-surveys')
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch surveys'
+      throw new Error(errorMessage)
+    }
+  },
+
   /**
    * Get task execution by ID
    */
@@ -595,6 +645,177 @@ export const taskService = {
       return response.data
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch historical tasks'
+      throw new Error(errorMessage)
+    }
+  },
+
+  // ==================== Report APIs ====================
+
+  /**
+   * Get the store-wise checklist completion report (pivot-ready).
+   * Row: Store | Columns: Checklist | Values: COMPLETED count | Last: Average % completed.
+   *
+   * Callers must always pass `storeIds` (the logged-in user's mapped stores),
+   * otherwise the API returns data for every store.
+   */
+  async getStoreWiseChecklistCompletion(filters: {
+    storeIds?: number[]
+    city?: string
+    checklistPriority?: string
+    fromDate?: string
+    toDate?: string
+    roleId?: number
+  }): Promise<StoreWiseChecklistCompletionResponse> {
+    try {
+      // Axios serializes arrays as `storeIds[]=1&storeIds[]=2`, which NestJS
+      // won't map to `storeIds`. The backend DTO already accepts comma-separated
+      // values, so send storeIds as a comma-joined string.
+      const params: Record<string, string | number | undefined> = {
+        city: filters.city,
+        checklistPriority: filters.checklistPriority,
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
+        roleId: filters.roleId,
+      }
+      if (filters.storeIds && filters.storeIds.length > 0) {
+        params.storeIds = filters.storeIds.join(',')
+      }
+      const response = await taskApi.get<ApiResponse<StoreWiseChecklistCompletionResponse>>('/reports/store-wise-checklist-completion', {
+        params,
+      })
+      return response.data.data || {
+        filters: {},
+        checklists: [],
+        rows: [],
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch store-wise checklist completion report'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get the store-wise checklist status report (pivot-ready).
+   * Row: Store | Columns: Checklist | Values: status-wise counts | Single date (`fromDate`).
+   *
+   * Callers must always pass `storeIds` (the logged-in user's mapped stores),
+   * otherwise the API returns data for every store.
+   */
+  async getStoreWiseChecklistStatus(filters: {
+    storeIds?: number[]
+    city?: string
+    checklistPriority?: string
+    fromDate?: string
+    roleId?: number
+  }): Promise<StoreWiseChecklistStatusResponse> {
+    try {
+      // Axios serializes arrays as `storeIds[]=1&storeIds[]=2`, which NestJS
+      // won't map to `storeIds`. The backend DTO already accepts comma-separated
+      // values, so send storeIds as a comma-joined string.
+      const params: Record<string, string | number | undefined> = {
+        city: filters.city,
+        checklistPriority: filters.checklistPriority,
+        fromDate: filters.fromDate,
+        roleId: filters.roleId,
+      }
+      if (filters.storeIds && filters.storeIds.length > 0) {
+        params.storeIds = filters.storeIds.join(',')
+      }
+      const response = await taskApi.get<ApiResponse<StoreWiseChecklistStatusResponse>>('/reports/store-wise-checklist-status', {
+        params,
+      })
+      return response.data.data || {
+        filters: {},
+        statuses: [],
+        checklists: [],
+        rows: [],
+        taskChecklistExecutionIds: {},
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch store-wise checklist status report'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get the store-date-wise checklist completion report (pivot-ready).
+   * Row: Store | Columns: Date (every day in range) | Values: status-wise counts + completion %.
+   *
+   * Callers must always pass `storeIds` (the logged-in user's mapped stores),
+   * otherwise the API returns data for every store.
+   */
+  async getStoreDateWiseChecklistCompletion(filters: {
+    storeIds?: number[]
+    city?: string
+    checklistPriority?: string
+    roleId?: number
+    masterChecklistId?: number
+    fromDate?: string
+    toDate?: string
+  }): Promise<StoreDateWiseChecklistResponse> {
+    try {
+      // Axios serializes arrays as `storeIds[]=1&storeIds[]=2`, which NestJS
+      // won't map to `storeIds`. The backend DTO already accepts comma-separated
+      // values, so send storeIds as a comma-joined string.
+      const params: Record<string, string | number | undefined> = {
+        city: filters.city,
+        checklistPriority: filters.checklistPriority,
+        roleId: filters.roleId,
+        masterChecklistId: filters.masterChecklistId,
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
+      }
+      if (filters.storeIds && filters.storeIds.length > 0) {
+        params.storeIds = filters.storeIds.join(',')
+      }
+      const response = await taskApi.get<ApiResponse<StoreDateWiseChecklistResponse>>('/reports/store-date-wise-checklist-completion', {
+        params,
+      })
+      return response.data.data || {
+        filters: {},
+        dates: [],
+        rows: [],
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch store-date-wise checklist completion report'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get the store survey date wise completion status report (pivot-ready).
+   * Row: Store | Columns: Date (every day in range) | Values: survey status + completion %.
+   *
+   * Callers must always pass `storeIds` (the logged-in user's mapped stores),
+   * otherwise the API returns data for every store.
+   */
+  async getStoreSurveyDateWiseCompletion(filters: {
+    storeIds?: number[]
+    city?: string
+    surveyId?: number
+    fromDate?: string
+    toDate?: string
+  }): Promise<StoreSurveyDateWiseResponse> {
+    try {
+      const params: Record<string, string | number | undefined> = {
+        city: filters.city,
+        surveyId: filters.surveyId,
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
+      }
+      if (filters.storeIds && filters.storeIds.length > 0) {
+        params.storeIds = filters.storeIds.join(',')
+      }
+      const response = await taskApi.get<ApiResponse<StoreSurveyDateWiseResponse>>('/reports/store-survey-date-wise-completion', {
+        params,
+      })
+      return response.data.data || {
+        filters: {},
+        dates: [],
+        rows: [],
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch store survey date wise completion status report'
       throw new Error(errorMessage)
     }
   },

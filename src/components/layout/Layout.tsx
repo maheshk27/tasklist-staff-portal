@@ -154,7 +154,8 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (item.title === 'Team Tasks') {
       return user?.role?.roleName?.toUpperCase() === 'AREA MANAGER (AM)' ||
         user?.role?.roleName?.toUpperCase() === 'BRANCH MANAGER (BM)' ||
-        user?.role?.roleName?.toUpperCase() === 'GENERAL MANAGER OPERATIONS (GM)'
+        user?.role?.roleName?.toUpperCase() === 'GENERAL MANAGER OPERATIONS (GM)' ||
+        user?.role?.roleName?.toUpperCase() === 'DEPARTMENT HEAD'
     }
     return true
   })

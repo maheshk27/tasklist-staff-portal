@@ -69,7 +69,8 @@ const TeamTasks: React.FC = () => {
   useEffect(() => {
     if (!user || (user.role?.roleName?.toUpperCase() !== 'AREA MANAGER (AM)'
       && user.role?.roleName?.toUpperCase() !== 'BRANCH MANAGER (BM)')
-      && user.role?.roleName?.toUpperCase() !== 'GENERAL MANAGER OPERATIONS (GM)') {
+      && user.role?.roleName?.toUpperCase() !== 'GENERAL MANAGER OPERATIONS (GM)'
+      && user.role?.roleName?.toUpperCase() !== 'DEPARTMENT HEAD') {
       navigate('/dashboard')
     }
   }, [user, navigate])

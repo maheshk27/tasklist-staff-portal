@@ -25,7 +25,8 @@ const Dashboard: React.FC = () => {
   // Determine if Team Tasks should be shown (same condition as sidebar)
   const showTeamTasks = user?.role?.roleName?.toUpperCase() === 'AREA MANAGER (AM)' ||
     user?.role?.roleName?.toUpperCase() === 'BRANCH MANAGER (BM)' ||
-    user?.role?.roleName?.toUpperCase() === 'GENERAL MANAGER OPERATIONS (GM)'
+    user?.role?.roleName?.toUpperCase() === 'GENERAL MANAGER OPERATIONS (GM)' ||
+    user?.role?.roleName?.toUpperCase() === 'DEPARTMENT HEAD'
 
   // Quick links configuration
   const quickLinks: QuickLink[] = [

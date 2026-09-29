@@ -10,6 +10,13 @@ import {
   completionColor,
 } from '../../utils/dashboard-overview'
 import StatusChip from './StatusChip'
+import ChartCard, { ChartStatePanel } from '../charts/ChartCard'
+import CompletionTrendChart, { type TrendPoint } from '../charts/CompletionTrendChart'
+import StatusDonutChart from '../charts/StatusDonutChart'
+import { localDateString } from '../../hooks/useAnalyticsData'
+
+/** Days of history pulled for the mini trend chart (today included). */
+const TREND_DAYS = 7
 
 interface TodayStoreChecklistOverviewProps {
   /** Store IDs from the logged-in user's store mapping (never the full store list). */
@@ -45,6 +52,7 @@ const TodayStoreChecklistOverview: React.FC<TodayStoreChecklistOverviewProps> = 
   storesError,
 }) => {
   const [storeOverview, setStoreOverview] = useState<StoreDateWiseChecklistRow[]>([])
+  const [dateColumns, setDateColumns] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showStoreSummary, setShowStoreSummary] = useState(false)
@@ -53,6 +61,7 @@ const TodayStoreChecklistOverview: React.FC<TodayStoreChecklistOverviewProps> = 
     // Never call the report without a store scope: the API would return every store.
     if (storeIds.length === 0) {
       setStoreOverview([])
+      setDateColumns([])
       setLoading(false)
       return
     }
@@ -60,15 +69,18 @@ const TodayStoreChecklistOverview: React.FC<TodayStoreChecklistOverviewProps> = 
     setError(null)
     try {
       const today = getTodayString()
+      // One request covers both the today cards and the 7-day trend chart.
       const data = await taskService.getStoreDateWiseChecklistCompletion({
         storeIds,
-        fromDate: today,
+        fromDate: localDateString(TREND_DAYS - 1),
         toDate: today,
       })
       setStoreOverview(data.rows || [])
+      setDateColumns((data.dates || []).map(column => column.date))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load today's store data")
       setStoreOverview([])
+      setDateColumns([])
     } finally {
       setLoading(false)
     }
@@ -126,6 +138,30 @@ const TodayStoreChecklistOverview: React.FC<TodayStoreChecklistOverviewProps> = 
   // store scope is usable.
   const showSummaryBlocks = !loading && !error && storeCards.length > 0
 
+  // Daily completion trend across the mapped stores (same 7-day fetch as above).
+  const trendPoints: TrendPoint[] = dateColumns.map(date => {
+    let total = 0
+    let completed = 0
+    storeOverview.forEach(row => {
+      const cell = row.values[date]
+      total += cell?.total || 0
+      completed += cell?.completed || 0
+    })
+    const percent = total > 0 ? Number(((completed / total) * 100).toFixed(1)) : 0
+    // Groups: YYYY-MM-DD -> DD-MM-YYYY (skip indices: [0]=full, [1]=year…).
+    const [, year, month, day] = /^(\d{4})-(\d{2})-(\d{2})/.exec(date) || []
+    return {
+      label: year && month && day ? `${day}-${month}-${year}` : date,
+      value: percent,
+      secondary: `${completed}/${total}`,
+    }
+  })
+
+  // Today's status mix, for the donut beside the trend.
+  const todaySlices = overallStatusList.map(([status, count]) => ({ status, value: count }))
+
+  const trendHasData = trendPoints.some(point => point.value > 0 || point.secondary !== '0/0')
+
   return (
     <div className="bg-card p-6 rounded-xl border border-border">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -160,6 +196,49 @@ const TodayStoreChecklistOverview: React.FC<TodayStoreChecklistOverviewProps> = 
             View full report
           </Link>
         </div>
+      </div>
+
+      {/* 7-day trend + today's status mix */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ChartCard
+          title="Completion Trend"
+          subtitle={`Daily checklist completion across your ${storeIds.length || 0} mapped store${storeIds.length === 1 ? '' : 's'} (last ${TREND_DAYS} days)`}
+          className="bg-background"
+        >
+          {storesError ? (
+            <ChartStatePanel variant="error" message={storesError} />
+          ) : !storesReady || loading ? (
+            <ChartStatePanel variant="loading" />
+          ) : storeIds.length === 0 ? (
+            <ChartStatePanel variant="no-stores" />
+          ) : error ? (
+            <ChartStatePanel variant="error" message={error} />
+          ) : !trendHasData ? (
+            <ChartStatePanel variant="empty" message="No checklist executions found in the last 7 days." />
+          ) : (
+            <CompletionTrendChart points={trendPoints} />
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Today's Status Mix"
+          subtitle="Checklist execution statuses for today"
+          className="bg-background"
+        >
+          {storesError ? (
+            <ChartStatePanel variant="error" message={storesError} />
+          ) : !storesReady || loading ? (
+            <ChartStatePanel variant="loading" />
+          ) : storeIds.length === 0 ? (
+            <ChartStatePanel variant="no-stores" />
+          ) : error ? (
+            <ChartStatePanel variant="error" message={error} />
+          ) : todaySlices.length === 0 ? (
+            <ChartStatePanel variant="empty" message="No checklist executions found for today." />
+          ) : (
+            <StatusDonutChart slices={todaySlices} centerLabel="Executions" />
+          )}
+        </ChartCard>
       </div>
 
       {/* Overall status-wise summary */}

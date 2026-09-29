@@ -1,5 +1,5 @@
 import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
-import { useEffect } from 'react'
+import { useEffect, Suspense, lazy } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { Toaster } from 'react-hot-toast'
 import { useAuth } from './hooks/useAuth'
@@ -27,6 +27,11 @@ import StoreWiseChecklistStatus from './modules/reports/pages/StoreWiseChecklist
 import StoreDateWiseChecklistCompletion from './modules/reports/pages/StoreDateWiseChecklistCompletion'
 import StoreSurveyDateWiseCompletion from './modules/reports/pages/StoreSurveyDateWiseCompletion'
 import NotFound from './pages/NotFound'
+import Loading from './components/Loading'
+
+// Analytics is a chart-heavy secondary page — load it on demand so its code
+// stays out of the initial bundle.
+const ReportsAnalytics = lazy(() => import('./pages/ReportsAnalytics'))
 
 // Redirect authenticated users to dashboard
 const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -171,6 +176,15 @@ function App() {
         <Route path="/store-survey-date-wise-completion" element={
           <ProtectedRoute>
             <Layout><StoreSurveyDateWiseCompletion /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/reports-analytics" element={
+          <ProtectedRoute>
+            <Layout>
+              <Suspense fallback={<Loading message="Loading analytics..." />}>
+                <ReportsAnalytics />
+              </Suspense>
+            </Layout>
           </ProtectedRoute>
         } />
 

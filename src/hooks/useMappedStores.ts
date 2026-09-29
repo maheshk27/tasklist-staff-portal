@@ -16,55 +16,105 @@ export interface UseMappedStoresResult {
 
 /**
  * useMappedStores — the single source of truth for the store list shown on the
- * staff-portal report pages.
+ * staff-portal report/analytics pages.
  *
  * Staff users must only ever see the stores that are mapped to them via the
  * user-store mapping (`GET /user-stores/user/:userId`), never the full store
  * master list. Inactive mappings are excluded, matching My Tasks / Daily Survey.
+ *
+ * The mapping is requested once per user and shared between every component
+ * that needs it (a page can mount several of these hooks), so opening the
+ * Analytics page costs a single `/user-stores` call instead of one per chart.
  */
+
+interface StoresCacheEntry {
+  stores: Store[]
+  timestamp: number
+}
+
+/** Short TTL: the mapping changes rarely, but a refresh must still take effect. */
+const CACHE_TTL_MS = 60_000
+const storesCache = new Map<number, StoresCacheEntry>()
+const inflightRequests = new Map<number, Promise<Store[]>>()
+
+/** Fetch + normalise the mapped stores for a user, de-duplicating concurrent calls. */
+function loadMappedStores(userId: number, force = false): Promise<Store[]> {
+  if (!force) {
+    const cached = storesCache.get(userId)
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL_MS) {
+      return Promise.resolve(cached.stores)
+    }
+    const pending = inflightRequests.get(userId)
+    if (pending) return pending
+  }
+
+  const request = onboardingService
+    .getUserStores(userId)
+    .then(response => {
+      const mappedStores = response.stores
+        .filter(item => item.mapping?.isActive)
+        .map(item => item.store)
+        .sort((a, b) => (a.storeName || '').localeCompare(b.storeName || ''))
+      storesCache.set(userId, { stores: mappedStores, timestamp: Date.now() })
+      return mappedStores
+    })
+    .finally(() => {
+      inflightRequests.delete(userId)
+    })
+
+  inflightRequests.set(userId, request)
+  return request
+}
+
 export function useMappedStores(): UseMappedStoresResult {
   const { user } = useAuth()
 
-  const [stores, setStores] = useState<Store[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
+  const userId = user?.userId
   const [reloadToken, setReloadToken] = useState(0)
 
-  const refresh = useCallback(() => setReloadToken(token => token + 1), [])
+  // `resolvedKey` records which (user + reload) combination the stored result
+  // belongs to, so "loading" can be derived instead of set synchronously inside
+  // the effect (which the React Compiler lint rules disallow).
+  const [state, setState] = useState<{ resolvedKey: string | null; stores: Store[]; error: string | null }>({
+    resolvedKey: null,
+    stores: [],
+    error: null,
+  })
+
+  const requestKey = `${userId ?? 'none'}:${reloadToken}`
+
+  // Refresh bypasses the cache so "Refresh" always hits the API.
+  const refresh = useCallback(() => {
+    if (userId) storesCache.delete(userId)
+    setReloadToken(token => token + 1)
+  }, [userId])
 
   useEffect(() => {
-    if (!user?.userId) {
-      setStores([])
-      setIsLoading(false)
-      return
-    }
-
+    if (!userId) return
     let cancelled = false
-    setIsLoading(true)
-    setError(null)
 
-    const fetchStores = async () => {
-      try {
-        const response = await onboardingService.getUserStores(user.userId)
-        if (cancelled) return
-        const mappedStores = response.stores
-          .filter(item => item.mapping?.isActive)
-          .map(item => item.store)
-          .sort((a, b) => (a.storeName || '').localeCompare(b.storeName || ''))
-        setStores(mappedStores)
-      } catch (err) {
+    // Cached reads resolve in a microtask and fresh reads after the request, so
+    // every setState below happens asynchronously.
+    loadMappedStores(userId, reloadToken > 0)
+      .then(mappedStores => {
+        if (!cancelled) setState({ resolvedKey: requestKey, stores: mappedStores, error: null })
+      })
+      .catch((err: unknown) => {
         if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load your mapped stores')
-          setStores([])
+          setState({
+            resolvedKey: requestKey,
+            stores: [],
+            error: err instanceof Error ? err.message : 'Failed to load your mapped stores',
+          })
         }
-      } finally {
-        if (!cancelled) setIsLoading(false)
-      }
-    }
+      })
 
-    fetchStores()
     return () => { cancelled = true }
-  }, [user?.userId, reloadToken])
+  }, [userId, reloadToken, requestKey])
+
+  const stores = useMemo(() => (userId ? state.stores : []), [userId, state.stores])
+  const error = userId ? state.error : null
+  const isLoading = Boolean(userId) && state.resolvedKey !== requestKey
 
   return {
     stores,

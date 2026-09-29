@@ -18,6 +18,7 @@ import {
   BarChart3,
   ListChecks,
   ClipboardList,
+  TrendingUp,
 } from 'lucide-react'
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useNotifications'
@@ -130,6 +131,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       title: 'Reports',
       icon: BarChart3,
       children: [
+        { title: 'Reports & Analytics', icon: TrendingUp, path: '/reports-analytics' },
         { title: 'Store Checklist Completion', icon: ListChecks, path: '/store-wise-checklist-completion' },
         { title: 'Store Checklist Status', icon: ListChecks, path: '/store-wise-checklist-status' },
         { title: 'Store Date-Wise Completion', icon: ListChecks, path: '/store-date-wise-checklist-completion' },

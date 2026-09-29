@@ -19,6 +19,7 @@ import type { StoreWiseChecklistCompletionResponse } from '../types/store-wise-c
 import type { StoreWiseChecklistStatusResponse } from '../types/store-wise-checklist-status'
 import type { StoreDateWiseChecklistResponse } from '../types/store-date-wise-checklist-completion'
 import type { TaskChecklist } from '../types/task-checklist'
+import type { TaskExecutionReportResponse } from '../types/task-execution-report'
 import type { StoreSurveyDateWiseResponse } from '../types/store-survey-date-wise-completion'
 
 export interface ApiResponse<T = unknown> {
@@ -816,6 +817,59 @@ export const taskService = {
       }
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch store survey date wise completion status report'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get the task-execution-details report (used by the analytics charts).
+   * Returns per-store, per-user and per-execution detail plus summary counts,
+   * so on-time/delayed, leaderboard and trend charts need a single request.
+   *
+   * Callers must always pass `storeIds` (the logged-in user's mapped stores),
+   * otherwise the API returns data for every store.
+   */
+  async getTaskExecutionDetails(filters: {
+    storeIds?: number[]
+    city?: string
+    taskPriority?: string
+    checklistPriority?: string
+    roleId?: number
+    masterChecklistId?: number
+    fromDate?: string
+    toDate?: string
+  }): Promise<TaskExecutionReportResponse> {
+    try {
+      const params: Record<string, string | number | undefined> = {
+        city: filters.city,
+        taskPriority: filters.taskPriority,
+        checklistPriority: filters.checklistPriority,
+        roleId: filters.roleId,
+        masterChecklistId: filters.masterChecklistId,
+        fromDate: filters.fromDate,
+        toDate: filters.toDate,
+      }
+      if (filters.storeIds && filters.storeIds.length > 0) {
+        params.storeIds = filters.storeIds.join(',')
+      }
+      const response = await taskApi.get<ApiResponse<TaskExecutionReportResponse>>('/reports/task-execution-details', {
+        params,
+      })
+      return response.data.data || {
+        filters: {},
+        summary: {
+          totalTaskExecutions: 0,
+          totalChecklistExecutions: 0,
+          taskStatusCounts: {},
+          checklistStatusCounts: {},
+        },
+        stores: [],
+        users: [],
+        executions: [],
+        masterChecklists: [],
+      }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch the task execution details report'
       throw new Error(errorMessage)
     }
   },

@@ -10,6 +10,13 @@ import {
   completionColor,
 } from '../../utils/dashboard-overview'
 import StatusChip from './StatusChip'
+import ChartCard, { ChartStatePanel } from '../charts/ChartCard'
+import CompletionTrendChart, { type TrendPoint } from '../charts/CompletionTrendChart'
+import StatusDonutChart from '../charts/StatusDonutChart'
+import { localDateString } from '../../hooks/useAnalyticsData'
+
+/** Days of history pulled for the mini trend chart (today included). */
+const TREND_DAYS = 7
 
 interface TodayStoreSurveyOverviewProps {
   /** Store IDs from the logged-in user's store mapping (never the full store list). */
@@ -46,6 +53,7 @@ const TodayStoreSurveyOverview: React.FC<TodayStoreSurveyOverviewProps> = ({
   storesError,
 }) => {
   const [surveyOverview, setSurveyOverview] = useState<StoreSurveyDateWiseResponse | null>(null)
+  const [dateColumns, setDateColumns] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [showSurveyStoreSummary, setShowSurveyStoreSummary] = useState(false)
@@ -54,6 +62,7 @@ const TodayStoreSurveyOverview: React.FC<TodayStoreSurveyOverviewProps> = ({
     // Never call the report without a store scope: the API would return every store.
     if (storeIds.length === 0) {
       setSurveyOverview(null)
+      setDateColumns([])
       setLoading(false)
       return
     }
@@ -61,15 +70,18 @@ const TodayStoreSurveyOverview: React.FC<TodayStoreSurveyOverviewProps> = ({
     setError(null)
     try {
       const today = getTodayString()
+      // One request covers both the today cards and the 7-day trend chart.
       const data = await taskService.getStoreSurveyDateWiseCompletion({
         storeIds,
-        fromDate: today,
+        fromDate: localDateString(TREND_DAYS - 1),
         toDate: today,
       })
       setSurveyOverview(data)
+      setDateColumns((data.dates || []).map(column => column.date))
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to load today's survey data")
       setSurveyOverview(null)
+      setDateColumns([])
     } finally {
       setLoading(false)
     }
@@ -137,6 +149,32 @@ const TodayStoreSurveyOverview: React.FC<TodayStoreSurveyOverviewProps> = ({
   // Summary blocks / store grid only render when there is data to show and the
   // store scope is usable.
   const showSummaryBlocks = !loading && !error && surveyCards.length > 0
+
+  // Daily survey item-completion trend across the mapped stores (same fetch).
+  const trendPoints: TrendPoint[] = dateColumns.map(date => {
+    let totalItems = 0
+    let completedItems = 0
+    ;(surveyOverview?.rows || []).forEach(row => {
+      const cells: SurveyDateCell[] = row.values[date] || []
+      cells.forEach(cell => {
+        totalItems += cell.totalItems || 0
+        completedItems += cell.completedItems || 0
+      })
+    })
+    const percent = totalItems > 0 ? Number(((completedItems / totalItems) * 100).toFixed(1)) : 0
+    // Groups: YYYY-MM-DD -> DD-MM-YYYY (skip indices: [0]=full, [1]=year…).
+    const [, year, month, day] = /^(\d{4})-(\d{2})-(\d{2})/.exec(date) || []
+    return {
+      label: year && month && day ? `${day}-${month}-${year}` : date,
+      value: percent,
+      secondary: `${completedItems}/${totalItems} items`,
+    }
+  })
+
+  // Today's survey status mix, for the donut beside the trend.
+  const todaySlices = surveyOverallStatusList.map(([status, count]) => ({ status, value: count }))
+
+  const trendHasData = trendPoints.some(point => point.secondary !== '0/0 items')
   return (
     <div className="bg-card p-6 rounded-xl border border-border">
       <div className="flex flex-wrap items-center justify-between gap-3 mb-4">
@@ -171,6 +209,49 @@ const TodayStoreSurveyOverview: React.FC<TodayStoreSurveyOverviewProps> = ({
             View full report
           </Link>
         </div>
+      </div>
+
+      {/* 7-day trend + today's status mix */}
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <ChartCard
+          title="Survey Completion Trend"
+          subtitle={`Daily survey item completion across your ${storeIds.length || 0} mapped store${storeIds.length === 1 ? '' : 's'} (last ${TREND_DAYS} days)`}
+          className="bg-background"
+        >
+          {storesError ? (
+            <ChartStatePanel variant="error" message={storesError} />
+          ) : !storesReady || loading ? (
+            <ChartStatePanel variant="loading" />
+          ) : storeIds.length === 0 ? (
+            <ChartStatePanel variant="no-stores" />
+          ) : error ? (
+            <ChartStatePanel variant="error" message={error} />
+          ) : !trendHasData ? (
+            <ChartStatePanel variant="empty" message="No survey executions found in the last 7 days." />
+          ) : (
+            <CompletionTrendChart points={trendPoints} />
+          )}
+        </ChartCard>
+
+        <ChartCard
+          title="Today's Survey Status Mix"
+          subtitle="Survey statuses recorded for today"
+          className="bg-background"
+        >
+          {storesError ? (
+            <ChartStatePanel variant="error" message={storesError} />
+          ) : !storesReady || loading ? (
+            <ChartStatePanel variant="loading" />
+          ) : storeIds.length === 0 ? (
+            <ChartStatePanel variant="no-stores" />
+          ) : error ? (
+            <ChartStatePanel variant="error" message={error} />
+          ) : todaySlices.length === 0 ? (
+            <ChartStatePanel variant="empty" message="No survey executions found for today." />
+          ) : (
+            <StatusDonutChart slices={todaySlices} centerLabel="Surveys" />
+          )}
+        </ChartCard>
       </div>
 
       {/* Overall status-wise summary */}

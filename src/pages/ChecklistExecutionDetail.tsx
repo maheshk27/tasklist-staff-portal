@@ -4,6 +4,7 @@ import toast from 'react-hot-toast'
 import {
   ChevronLeft,
   Clock,
+  Download,
   Hourglass,
   PlayCircle,
   CircleCheckBig,
@@ -31,6 +32,7 @@ import PageHeader from '../components/PageHeader'
 import { getPriorityColor } from '../utils/priority'
 import { formatDateTime, formatTime, isTimeToStart } from '../utils/date'
 import { getChecklistDelayNote } from '../utils/execution-delay'
+import { downloadFile } from '../utils/file-download'
 import { DelayNote } from '../components/BaseCard'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
@@ -80,6 +82,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({
   const [evidenceList, setEvidenceList] = useState<EvidenceResponseDto[]>([])
   const [isLoadingEvidence, setIsLoadingEvidence] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  // ID of the non-image evidence file currently being downloaded
+  const [downloadingEvidenceId, setDownloadingEvidenceId] = useState<number | null>(null)
 
   // Action state
   const [isStarting, setIsStarting] = useState(false)
@@ -290,6 +294,20 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({
     }
 
     setIsUploading(false)
+  }
+
+  // Download a non-image evidence file (PDF / Excel / CSV / text)
+  const handleDownloadEvidence = async (evidence: EvidenceResponseDto) => {
+    if (downloadingEvidenceId !== null) return
+    setDownloadingEvidenceId(evidence.taskEvidenceId)
+    try {
+      await downloadFile(
+        `${fileUploadBaseUrl}/${evidence.evidenceUrl}`,
+        evidence.fileName,
+      )
+    } finally {
+      setDownloadingEvidenceId(null)
+    }
   }
 
   // Navigate back based on readOnly mode (embedded modal mode just closes)
@@ -612,9 +630,28 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({
                         />
                       </button>
                     ) : (
-                      <div className="w-full aspect-square flex items-center justify-center bg-muted">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadEvidence(evidence)}
+                        disabled={downloadingEvidenceId !== null}
+                        className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-muted hover:bg-muted/70 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                        title={`Download ${evidence.fileName || 'file'}`}
+                      >
                         <span className="text-3xl">{getEvidenceFileIcon(evidence.mimeType)}</span>
-                      </div>
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground">
+                          {downloadingEvidenceId === evidence.taskEvidenceId ? (
+                            <>
+                              <span className="h-3 w-3 animate-spin rounded-full border-b-2 border-current" />
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-3 w-3" />
+                              Download
+                            </>
+                          )}
+                        </span>
+                      </button>
                     )}
 
                     <div className="p-2">

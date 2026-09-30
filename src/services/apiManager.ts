@@ -15,6 +15,7 @@ import type { TaskChecklistExecution, UpdateTaskChecklistExecutionDto, UpdateTas
 import type { EvidenceResponseDto } from '../types/evidence'
 import type { SurveyWithStatus, SurveyEntry, CreateSurveySubmissionDto, UpdateSurveyEntryDto, DailySurvey } from '../types/daily-survey'
 import type { Role } from '../types/role'
+import type { Menu, MenuTreeNode, MyPermissions } from '../types/menu'
 import type { StoreWiseChecklistCompletionResponse } from '../types/store-wise-checklist-completion'
 import type { StoreWiseChecklistStatusResponse } from '../types/store-wise-checklist-status'
 import type { StoreDateWiseChecklistResponse } from '../types/store-date-wise-checklist-completion'
@@ -239,6 +240,54 @@ export const onboardingService = {
       return response.data.data || []
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch roles'
+      throw new Error(errorMessage)
+    }
+  },
+
+  // ==================== Menu / Permission API ====================
+
+  /** Get all menus (flat list) */
+  async getMenus(): Promise<Menu[]> {
+    try {
+      const response = await onboardingApi.get<ApiResponse<Menu[]>>('/menus')
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch menus'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /** Get the menu tree, optionally filtered by portal (ADMIN or STAFF) */
+  async getMenuTree(portal?: string): Promise<MenuTreeNode[]> {
+    try {
+      const response = await onboardingApi.get<ApiResponse<MenuTreeNode[]>>('/menus/tree', {
+        params: portal ? { portal } : undefined,
+      })
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch menu tree'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /** Get the effective navigation tree for a role */
+  async getRoleMenuTree(roleId: number): Promise<MenuTreeNode[]> {
+    try {
+      const response = await onboardingApi.get<ApiResponse<MenuTreeNode[]>>(`/role-menus/role/${roleId}/menus`)
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch menus for role'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /** Get the granted permission codes for the current user's role */
+  async getMyPermissions(): Promise<MyPermissions> {
+    try {
+      const response = await onboardingApi.get<ApiResponse<MyPermissions>>('/role-permissions/my-permissions')
+      return response.data.data || { roleId: 0, roleName: '', permissions: [] }
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch permissions'
       throw new Error(errorMessage)
     }
   },

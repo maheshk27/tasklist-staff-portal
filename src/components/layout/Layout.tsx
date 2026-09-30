@@ -23,8 +23,10 @@ import {
 import { useAuth } from '../../hooks/useAuth'
 import { useNotifications } from '../../hooks/useNotifications'
 import { useTheme } from '../../hooks/useTheme'
-import { notificationService } from '../../services/apiManager'
+import { notificationService, onboardingService } from '../../services/apiManager'
 import type { NotificationLog } from '../../types/notification'
+import type { MenuTreeNode } from '../../types/menu'
+import { getMenuIcon } from '../../utils/iconRegistry'
 import PWAInstallPrompt from '../PWAInstallPrompt'
 
 interface LayoutProps {
@@ -38,6 +40,20 @@ interface MenuItem {
   children?: MenuItem[]
 }
 
+/**
+ * Convert an API menu tree node (from /role-menus/role/:roleId/menus) into the
+ * Layout's MenuItem shape, resolving stored icon names to Lucide components.
+ */
+const mapMenuNode = (node: MenuTreeNode): MenuItem => {
+  const children = (node.children || []).filter(child => child.isActive).map(mapMenuNode)
+  return {
+    title: node.menuName,
+    icon: getMenuIcon(node.icon),
+    path: node.routePath || undefined,
+    children: children.length > 0 ? children : undefined,
+  }
+}
+
 const Layout: React.FC<LayoutProps> = ({ children }) => {
   const location = useLocation()
   const navigate = useNavigate()
@@ -49,6 +65,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [collapsed, setCollapsed] = useState(false)
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false)
   const [userMenuOpen, setUserMenuOpen] = useState(false)
+
+  // Menus loaded from the API for the signed-in role. Falls back to the
+  // built-in `defaultMenuItems` when the API returns nothing.
+  const [dynamicMenuItems, setDynamicMenuItems] = useState<MenuItem[] | null>(null)
 
   // Notification bell / panel state
   const [notifications, setNotifications] = useState<NotificationLog[]>([])
@@ -121,7 +141,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     return () => clearTimeout(timer)
   }, [permission, messagingSupported, requestPermission])
 
-  const menuItems: MenuItem[] = [
+  const defaultMenuItems: MenuItem[] = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/dashboard' },
     { title: 'My Tasks', icon: CheckSquare, path: '/my-tasks' },
     { title: 'Team Tasks', icon: CheckSquare, path: '/team-tasks' },
@@ -149,6 +169,34 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       ]
     }
   ]
+
+  // Load the menu tree configured for the signed-in role (falls back to the
+  // built-in menu when the API returns nothing or is unreachable).
+  useEffect(() => {
+    const roleId = user?.role?.roleId
+    if (!roleId) return
+
+    let cancelled = false
+    const loadMenus = async () => {
+      try {
+        const tree = await onboardingService.getRoleMenuTree(roleId)
+        if (cancelled) return
+        const mapped = tree.filter(node => node.isActive).map(mapMenuNode)
+        if (mapped.length > 0) {
+          setDynamicMenuItems(mapped)
+        }
+      } catch {
+        // Keep the built-in menu when the API call fails
+      }
+    }
+
+    loadMenus()
+    return () => {
+      cancelled = true
+    }
+  }, [user?.role?.roleId])
+
+  const menuItems: MenuItem[] = dynamicMenuItems ?? defaultMenuItems
 
   const filteredMenuItems = menuItems.filter(item => {
     if (item.title === 'Team Tasks') {

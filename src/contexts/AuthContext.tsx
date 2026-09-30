@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, type ReactNode } from 'react'
 import { authService } from '../services/auth'
 import { tokenRefreshManager } from '../services/tokenRefresh'
+import { clearPermissionsCache } from '../hooks/usePermissions'
 import type { AuthState } from '../types/auth'
 import { AuthContext, type AuthContextType } from './AuthContextType'
 import {
@@ -190,6 +191,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     } finally {
       // Clear the persisted user details too
       clearStoredUserDetails()
+      clearPermissionsCache()
       setState(prev => ({
         ...prev,
         user: null,

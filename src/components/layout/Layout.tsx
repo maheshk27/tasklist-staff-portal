@@ -170,8 +170,10 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   ]
 
-  // Load the menu tree configured for the signed-in role (falls back to the
-  // built-in menu when the API returns nothing or is unreachable).
+  // Load the menu tree configured for the signed-in role. The sidebar reflects
+  // the role → menu mapping exactly, so a role with nothing mapped simply has no
+  // menu. The built-in `defaultMenuItems` is only a fallback when the request
+  // fails (e.g. API unreachable) so the portal stays usable during an outage.
   useEffect(() => {
     const roleId = user?.role?.roleId
     if (!roleId) return
@@ -181,10 +183,9 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
       try {
         const tree = await onboardingService.getRoleMenuTree(roleId)
         if (cancelled) return
-        const mapped = tree.filter(node => node.isActive).map(mapMenuNode)
-        if (mapped.length > 0) {
-          setDynamicMenuItems(mapped)
-        }
+        // Always set the result, even when empty, so unmapped roles don't fall
+        // back to the full built-in menu.
+        setDynamicMenuItems(tree.filter(node => node.isActive).map(mapMenuNode))
       } catch {
         // Keep the built-in menu when the API call fails
       }
@@ -197,16 +198,6 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [user?.role?.roleId])
 
   const menuItems: MenuItem[] = dynamicMenuItems ?? defaultMenuItems
-
-  const filteredMenuItems = menuItems.filter(item => {
-    if (item.title === 'Team Tasks') {
-      return user?.role?.roleName?.toUpperCase() === 'AREA MANAGER (AM)' ||
-        user?.role?.roleName?.toUpperCase() === 'BRANCH MANAGER (BM)' ||
-        user?.role?.roleName?.toUpperCase() === 'GENERAL MANAGER OPERATIONS (GM)' ||
-        user?.role?.roleName?.toUpperCase() === 'DEPARTMENT HEAD'
-    }
-    return true
-  })
 
   const [expandedMenus, setExpandedMenus] = useState<Set<string>>(new Set())
 
@@ -351,7 +342,7 @@ const Layout: React.FC<LayoutProps> = ({ children }) => {
         <aside className={`fixed inset-y-0 left-0 z-50 flex flex-col border-r border-border bg-card transition-all duration-300 ease-in-out lg:static lg:z-auto lg:translate-x-0 ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} ${collapsed ? 'w-[72px]' : 'w-80'}`}>
           <nav className={`flex-1 overflow-y-auto ${collapsed ? 'px-2 py-4' : 'px-3 py-4'}`}>
             <div className="space-y-1">
-              {filteredMenuItems.map(item => {
+              {menuItems.map(item => {
                 const Icon = item.icon
                 const active = isMenuActive(item)
                 const expanded = item.children ? expandedMenus.has(item.title) : false

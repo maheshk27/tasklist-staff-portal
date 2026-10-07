@@ -4,7 +4,7 @@ interface FormFieldProps {
   label: string
   name: string
   value: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
   type?: 'text' | 'email' | 'tel' | 'password' | 'date' | 'textarea'
   placeholder?: string
   error?: string
@@ -71,6 +71,7 @@ const FormField: React.FC<FormFieldProps> = ({
           id={name}
           name={name}
           value={value}
+          onChange={onChange}
           className={`w-full px-3 rounded-lg border bg-background text-foreground placeholder: py-3 placeholder: text-sm placeholder:text-muted-foreground shadow-xs transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary/60 focus:shadow-sm ${error ? 'border-red-500' : 'border-border'
             } ${icon ? 'pl-11' : ''} ${shouldShowPasswordToggle ? 'pr-11' : ''}`}
           placeholder={placeholder}

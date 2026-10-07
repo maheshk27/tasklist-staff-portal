@@ -19,6 +19,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user: null,
     isAuthenticated: false,
     isLoading: true,
+    isLoggingIn: false,
     error: null,
   })
 
@@ -148,7 +149,11 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
   }
 
   const login = useCallback(async (userName: string, password: string): Promise<void> => {
-    setState(prev => ({ ...prev, isLoading: true, error: null }))
+    // `isLoading` is intentionally left untouched here: it means "auth bootstrap
+    // in progress" and drives the full-page splash in PublicRoute/ProtectedRoute.
+    // Flipping it during sign-in unmounts the login page (flashing that splash
+    // and wiping the error message), so sign-in progress has its own flag.
+    setState(prev => ({ ...prev, isLoggingIn: true, error: null }))
 
     try {
       const response = await authService.login({ userName, password })
@@ -164,6 +169,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
           ...prev,
           user,
           isAuthenticated: true,
+          isLoggingIn: false,
           isLoading: false,
           error: null,
         }))
@@ -176,6 +182,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         ...prev,
         user: null,
         isAuthenticated: false,
+        isLoggingIn: false,
         isLoading: false,
         error: errorMessage,
       }))
@@ -209,11 +216,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     user: state.user,
     isAuthenticated: state.isAuthenticated,
     isLoading: state.isLoading,
+    isLoggingIn: state.isLoggingIn,
     error: state.error,
     login,
     logout,
     clearError,
-  }), [state.user, state.isAuthenticated, state.isLoading, state.error, login, logout, clearError])
+  }), [state.user, state.isAuthenticated, state.isLoading, state.isLoggingIn, state.error, login, logout, clearError])
 
   return (
     <AuthContext.Provider value={value}>

@@ -43,7 +43,10 @@ export interface RefreshTokenRequest {
 export interface AuthState {
   user: User | null
   isAuthenticated: boolean
+  /** Auth bootstrap in progress (initial session restore). Used by the routes. */
   isLoading: boolean
+  /** A sign-in request is currently in flight. Used by the login form. */
+  isLoggingIn: boolean
   error: string | null
 }
 

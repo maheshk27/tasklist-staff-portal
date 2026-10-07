@@ -9,10 +9,12 @@ import AuthLayout from '../../../components/layout/AuthLayout'
 const Login: React.FC = () => {
   const [userName, setUserName] = useState('')
   const [password, setPassword] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
   const [errors, setErrors] = useState<Record<string, string>>({})
 
-  const { login, error: authError, clearError } = useAuth()
+  // Sign-in progress lives in the auth context (isLoggingIn) instead of local
+  // state, so the button stays in sync and the form is never unmounted while
+  // the request is in flight (which used to hide the error message).
+  const { login, error: authError, clearError, isLoggingIn } = useAuth()
   const navigate = useNavigate()
   const location = useLocation()
   const isFormSubmitted = useRef(false)
@@ -58,8 +60,6 @@ const Login: React.FC = () => {
     // Mark that form has been submitted to prevent auto-clearing
     isFormSubmitted.current = true
 
-    setIsLoading(true)
-
     try {
       await login(userName, password)
       // Redirect to the page they were trying to visit before being redirected to login
@@ -67,8 +67,6 @@ const Login: React.FC = () => {
     } catch (error) {
       // Error is handled by the auth context - don't clear it here
       console.error('Login failed:', error)
-    } finally {
-      setIsLoading(false)
     }
   }
 
@@ -112,7 +110,7 @@ const Login: React.FC = () => {
           type="text"
           placeholder="Enter your username"
           required={true}
-          disabled={isLoading}
+          disabled={isLoggingIn}
           error={errors.userName}
           icon={<User className="w-5 h-5" />}
         />
@@ -125,7 +123,7 @@ const Login: React.FC = () => {
           type="password"
           placeholder="Enter your password"
           required={true}
-          disabled={isLoading}
+          disabled={isLoggingIn}
           showPasswordToggle={true}
           error={errors.password}
           icon={<Lock className="w-5 h-5" />}
@@ -140,8 +138,8 @@ const Login: React.FC = () => {
             variant="default"
             size="lg"
             className="w-full py-3 font-semibold shadow-lg shadow-primary/25 hover:shadow-primary/40 transition-shadow"
-            title={isLoading ? "Signing in..." : "Sign In"}
-            disabled={isLoading}
+            title={isLoggingIn ? "Signing in..." : "Sign In"}
+            disabled={isLoggingIn}
           />
         </div>
       </form>

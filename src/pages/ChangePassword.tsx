@@ -15,7 +15,7 @@ const ChangePassword: React.FC = () => {
   const [isSuccess, setIsSuccess] = useState(false)
   const [apiError, setApiError] = useState<string | null>(null)
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value

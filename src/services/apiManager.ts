@@ -20,6 +20,7 @@ import type { StoreWiseChecklistCompletionResponse } from '../types/store-wise-c
 import type { StoreWiseChecklistStatusResponse } from '../types/store-wise-checklist-status'
 import type { StoreDateWiseChecklistResponse } from '../types/store-date-wise-checklist-completion'
 import type { TaskChecklist } from '../types/task-checklist'
+import type { TaskMaster } from '../types/task'
 import type { TaskExecutionReportResponse } from '../types/task-execution-report'
 import type { StoreSurveyDateWiseResponse } from '../types/store-survey-date-wise-completion'
 
@@ -353,6 +354,21 @@ export const taskService = {
       return response.data.data || []
     } catch (error: unknown) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch task checklists'
+      throw new Error(errorMessage)
+    }
+  },
+
+  /**
+   * Get all task masters (master task catalogue).
+   * Used by the reports' "Master Tasklist" filter; the endpoint only requires
+   * authentication, so staff users can call it too.
+   */
+  async getTasks(): Promise<TaskMaster[]> {
+    try {
+      const response = await taskApi.get<ApiResponse<TaskMaster[]>>('/task-masters')
+      return response.data.data || []
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to fetch tasks'
       throw new Error(errorMessage)
     }
   },
@@ -799,6 +815,7 @@ export const taskService = {
     city?: string
     checklistPriority?: string
     roleId?: number
+    masterTasklistId?: number
     masterChecklistId?: number
     fromDate?: string
     toDate?: string
@@ -811,6 +828,7 @@ export const taskService = {
         city: filters.city,
         checklistPriority: filters.checklistPriority,
         roleId: filters.roleId,
+        masterTasklistId: filters.masterTasklistId,
         masterChecklistId: filters.masterChecklistId,
         fromDate: filters.fromDate,
         toDate: filters.toDate,

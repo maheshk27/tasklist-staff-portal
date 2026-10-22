@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useEffect, useRef } from 'react'
+import React, { useState, useCallback, useEffect, useRef, useMemo } from 'react'
 import toast from 'react-hot-toast'
 import { onboardingService, taskService } from '../../../services/apiManager'
 import type {
@@ -6,6 +6,7 @@ import type {
   StoreDateWiseChecklistRow,
 } from '../../../types/store-date-wise-checklist-completion'
 import type { TaskChecklist } from '../../../types/task-checklist'
+import type { TaskMaster } from '../../../types/task'
 import type { Role } from '../../../types/role'
 import { useMappedStores, resolveReportStoreIds } from '../../../hooks/useMappedStores'
 import MultiSelectDropdown, { type MultiSelectOption } from '../../../components/ui/MultiSelectDropdown'
@@ -117,6 +118,11 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
   const [selectedChecklistPriority, setSelectedChecklistPriority] = useState<string>('')
   const [roles, setRoles] = useState<Role[]>([])
   const [selectedRoleId, setSelectedRoleId] = useState<string>('')
+
+  // Master tasklist (task) selection - cascading: Role -> Task -> Checklist
+  const [tasks, setTasks] = useState<TaskMaster[]>([])
+  const [selectedTaskId, setSelectedTaskId] = useState<string>('')
+
   const [fromDate, setFromDate] = useState<string>(getDefaultFromDate())
   const [toDate, setToDate] = useState<string>(getTodayString())
   const [showFilters, setShowFilters] = useState(false)
@@ -135,6 +141,28 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
 
   // City filter derived from the mapped stores the user can report on.
   const cities = Array.from(new Set(stores.map(s => s.city).filter(Boolean))).sort()
+
+  // Tasks for the selected role (cascading: Role -> Task -> Checklist).
+  // When no role is selected, every fetched task is shown.
+  const filteredTasks = useMemo(() => {
+    if (!selectedRoleId) return tasks
+    const roleIdNum = parseInt(selectedRoleId, 10)
+    return [...tasks].filter(t => t.assignedRoleId === roleIdNum)
+  }, [selectedRoleId, tasks])
+
+  // Checklists for the selected task (filtered from the master checklists already loaded),
+  // further narrowed by the selected checklist priority when a task is chosen.
+  const taskChecklists = useMemo(() => {
+    if (!selectedTaskId) return checklists
+    const taskIdNum = parseInt(selectedTaskId, 10)
+    return [...checklists]
+      .filter(
+        c =>
+          c.mstTaskId === taskIdNum &&
+          (!selectedChecklistPriority || c.priority === selectedChecklistPriority),
+      )
+      .sort((a, b) => (a.regionalText || a.title).localeCompare(b.regionalText || b.title))
+  }, [selectedTaskId, selectedChecklistPriority, checklists])
 
   // Priority options for the report filter.
   const priorityOptions = ['HIGH', 'MEDIUM', 'LOW']
@@ -170,16 +198,31 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
     }
   }, [])
 
+  // Load all task masters on mount (same pattern as TaskList.tsx), then filter by role client-side.
+  const fetchTasks = useCallback(async () => {
+    try {
+      const taskData = await taskService.getTasks()
+      const sortedData = [...taskData].sort((a, b) => {
+        return a.title.localeCompare(b.title)
+      })
+      setTasks(sortedData)
+    } catch {
+      setTasks([])
+    }
+  }, [])
+
   useEffect(() => {
     fetchRoles()
     fetchChecklists()
-  }, [fetchRoles, fetchChecklists])
+    fetchTasks()
+  }, [fetchRoles, fetchChecklists, fetchTasks])
 
   const fetchReport = useCallback(async (opts: {
     storeIds: number[]
     city?: string
     checklistPriority?: string
     roleId?: string
+    masterTasklistId?: string
     masterChecklistId?: string
     from?: string
     to?: string
@@ -195,6 +238,7 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
         city: opts.city || undefined,
         checklistPriority: opts.checklistPriority || undefined,
         roleId: opts.roleId ? parseInt(opts.roleId, 10) : undefined,
+        masterTasklistId: opts.masterTasklistId ? parseInt(opts.masterTasklistId, 10) : undefined,
         masterChecklistId: opts.masterChecklistId ? parseInt(opts.masterChecklistId, 10) : undefined,
         fromDate: opts.from || undefined,
         toDate: opts.to || undefined,
@@ -223,14 +267,28 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
     })
   }, [isLoadingStores, mappedStoreIds, fetchReport])
 
+  const handleRoleChange = (roleId: string) => {
+    setSelectedRoleId(roleId)
+    setSelectedTaskId('')
+    setSelectedChecklistId('')
+  }
+
+  const handleTaskChange = (taskId: string) => {
+    setSelectedTaskId(taskId)
+    setSelectedChecklistId('')
+  }
+
   const handleSearch = () => {
+    // When a master task is selected, pass its ID as masterChecklistId;
+    // otherwise fall back to the selected checklist ID.
     fetchReport({
       // Selected stores, or every mapped store when nothing is selected.
       storeIds: resolveReportStoreIds(selectedStoreIds, mappedStoreIds),
       city: selectedCity,
       checklistPriority: selectedChecklistPriority,
       roleId: selectedRoleId,
-      masterChecklistId: selectedChecklistId,
+      masterTasklistId: selectedTaskId ? selectedTaskId : undefined,
+      masterChecklistId: selectedChecklistId ? selectedChecklistId : undefined,
       from: fromDate,
       to: toDate,
     })
@@ -241,6 +299,7 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
     setSelectedCity('')
     setSelectedChecklistPriority('')
     setSelectedRoleId('')
+    setSelectedTaskId('')
     setSelectedChecklistId('')
     setFromDate(getDefaultFromDate())
     setToDate(getTodayString())
@@ -266,7 +325,7 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
     label: `${store.storeName} (${store.storeCode})`,
   }))
 
-  const checklistOptions: MultiSelectOption[] = checklists.map(c => ({
+  const taskChecklistOptions = taskChecklists.map(c => ({
     value: c.mstChecklistId,
     label: `${c.regionalText || c.title} [${c.isMandatory ? 'Mandatory' : 'Optional'} | #${c.mstChecklistId}] `,
   }))
@@ -438,7 +497,7 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
         <FilterSection
           title="Search & Filter Checklist"
           hasActiveFilters={!!(selectedStoreIds.length || selectedCity || selectedChecklistPriority ||
-            selectedChecklistId || selectedRoleId || fromDate || toDate)}
+            selectedChecklistId || selectedRoleId || selectedTaskId || fromDate || toDate)}
           actions={
             <button
               onClick={() => setShowFilters(s => !s)}
@@ -477,6 +536,29 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
               />
             </div>
 
+            {/* Assignment Role */}
+            <FormSelect
+              label="Task Assignment Role"
+              name="assignmentRole"
+              value={selectedRoleId}
+              onChange={(e) => handleRoleChange(e.target.value)}
+              options={roles.map(role => ({ value: role.roleId, label: role.roleName }))}
+              placeholder="All Roles"
+            />
+
+            {/* Master Tasklist (based on selected role) */}
+            <FormSelect
+              label="Master Tasklist"
+              name="masterTaskId"
+              value={selectedTaskId}
+              onChange={(e) => handleTaskChange(e.target.value)}
+              options={filteredTasks.map(task => ({
+                value: String(task.mstTaskId),
+                label: `${task.title} (${task.regionalText || 'Not Available'}) | [#${task.mstTaskId}]`,
+              }))}
+              placeholder="Select Task"
+            />
+
             {/* Priority */}
             <FormSelect
               label="Checklist Priority"
@@ -487,24 +569,14 @@ const StoreDateWiseChecklistCompletion: React.FC = () => {
               placeholder="All Priorities"
             />
 
-            {/* Assignment Role */}
-            <FormSelect
-              label="Task Assignment Role"
-              name="assignmentRole"
-              value={selectedRoleId}
-              onChange={(e) => setSelectedRoleId(e.target.value)}
-              options={roles.map(role => ({ value: role.roleId, label: role.roleName }))}
-              placeholder="All Roles"
-            />
-
-            {/* Master Checklist (optional) */}
+            {/* Checklist (based on selected task) */}
             <FormSelect
               label="Checklist"
               name="masterChecklistId"
               value={selectedChecklistId}
               onChange={(e) => setSelectedChecklistId(e.target.value)}
-              options={checklistOptions}
-              placeholder="All Checklists"
+              options={taskChecklistOptions}
+              placeholder="Select Checklist"
             />
 
             {/* From Date */}

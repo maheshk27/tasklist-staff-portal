@@ -1,13 +1,27 @@
 import React, { useEffect, useState } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useLocation } from 'react-router-dom'
 import { taskService } from '../services/apiManager'
 import type { SurveyEntry } from '../types/daily-survey'
 import toast from 'react-hot-toast'
 import { formatDateTime } from '../utils/date'
+import PageHeader from '../components/PageHeader'
+import { ArrowLeft, Eye } from 'lucide-react'
+import { useAuth } from '../hooks/useAuth'
+import { canStartSurvey } from '../utils/surveyPermission'
 
 const SurveyEntryPage: React.FC = () => {
   const { dailySurveyId } = useParams<{ dailySurveyId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user } = useAuth()
+
+  // Permission: only BM/ABM/ABM(OTL)/STL/OTL roles can start/update surveys.
+  // Others can only view.
+  const userCanStartSurvey = canStartSurvey(user?.role?.roleName)
+
+  // Check if viewing historical survey (not today's date)
+  const today = new Date().toLocaleDateString('en-CA')
+  const viewOnlyFromNav = location.state?.viewOnly === true
 
   const [entries, setEntries] = useState<SurveyEntry[]>([])
   const [loading, setLoading] = useState(true)
@@ -25,6 +39,12 @@ const SurveyEntryPage: React.FC = () => {
     surveyName?: string
     surveyDays?: string[]
   } | null>(null)
+
+  // Determine if survey is for today's date
+  const isTodaySurvey = submissionDetails?.surveyDate === today
+  
+  // Combined view-only mode: from navigation state OR historical survey OR no permission
+  const isViewOnly = viewOnlyFromNav || !isTodaySurvey || !userCanStartSurvey
 
   // Local form data for each entry
   const [formData, setFormData] = useState<Record<number, {
@@ -203,33 +223,34 @@ const SurveyEntryPage: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <button
-            onClick={() => navigate('/survey')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors mb-2 flex items-center gap-1"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-            Back to Surveys
-          </button>
-          <h1 className="text-3xl font-bold">{submissionDetails?.surveyName || 'Survey Entry Details'}</h1>
-          {submissionDetails?.surveyDays && submissionDetails.surveyDays.length > 0 && (
-            <div className="flex flex-wrap gap-1 mt-2">
-              {submissionDetails.surveyDays.map((day) => (
-                <span
-                  key={day}
-                  className="px-2 py-0.5 text-xs font-medium rounded-full bg-muted text-muted-foreground"
-                >
-                  {day}
-                </span>
-              ))}
-            </div>
-          )}
+      <button
+        onClick={() => navigate('/survey')}
+        className="inline-flex items-center gap-2 px-4 py-2 border border-border rounded-lg hover:bg-muted transition-colors text-sm font-medium"
+      >
+        <ArrowLeft className="h-4 w-4" />
+        Back to Survey
+      </button>
+      <PageHeader
+        title={submissionDetails?.surveyName || 'Survey Entry Details'}
+        subtitle=""
+      />
+
+      {/* View-Only Notice for non-privileged roles or historical surveys */}
+      {isViewOnly && (
+        <div className="flex items-start gap-2 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+          <Eye className="h-5 w-5 text-blue-600 mt-0.5 shrink-0" />
+          <div>
+            <p className="text-sm font-medium text-blue-800">View-Only Mode</p>
+            <p className="text-sm text-blue-700 mt-0.5">
+              {!userCanStartSurvey
+                ? 'Your role does not have permission to start or update this survey. You can only view the survey details.'
+                : !isTodaySurvey
+                  ? 'This is a historical survey. You can only view the survey details.'
+                  : 'You can only view the survey details.'}
+            </p>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Submission Summary Card */}
       {submissionDetails && (
@@ -261,13 +282,13 @@ const SurveyEntryPage: React.FC = () => {
             </div>
 
             {/* Skipped */}
-           {/*  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
+            {/*  <div className="bg-red-50 rounded-lg p-4 border border-red-200">
               <p className="text-xs text-red-700 uppercase tracking-wide">Skipped</p>
               <p className="text-2xl font-bold mt-1 text-red-800">{skippedCount}</p>
             </div> */}
 
-              {/* Rack Clean */}
-              <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+            {/* Rack Clean */}
+            <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
               <p className="text-xs text-blue-700 uppercase tracking-wide">Rack Clean</p>
               <p className="text-2xl font-bold mt-1 text-blue-800">{rackCleanCount}</p>
             </div>
@@ -299,7 +320,14 @@ const SurveyEntryPage: React.FC = () => {
 
           {/* Submission Metadata */}
           {(submissionDetails.submittedBy || submissionDetails.verifiedBy || submissionDetails.surveyDate) && (
-            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm">
+            <div className="mt-4 pt-4 border-t border-border grid grid-cols-1 sm:grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+              {submissionDetails?.surveyDays && submissionDetails.surveyDays.length > 0 && (
+                <div>
+                  <span className="text-muted-foreground">Survey Days:</span>
+                  <span className="ml-1 font-medium">{submissionDetails.surveyDays.join(", ")}</span>
+                </div>
+                
+              )}
               {submissionDetails.surveyDate && (
                 <div>
                   <span className="text-muted-foreground">Survey Date:</span>
@@ -351,9 +379,9 @@ const SurveyEntryPage: React.FC = () => {
                       {/* <span className="w-7 h-7 bg-primary/10 rounded-full flex items-center justify-center text-xs font-semibold text-primary">
                         {index + 1}
                       </span> */}
-                      <h3 className="text-foreground">
+                      <div className="text-sm text-foreground font-semibold">
                         {(entry as any).surveyItemName || `Item #${entry.surveyItemId}`}
-                      </h3>
+                      </div>
                     </div>
                   </div>
                   {getStatusBadge(entry.entryStatus)}
@@ -371,7 +399,8 @@ const SurveyEntryPage: React.FC = () => {
                       min="0"
                       value={data.stockOutCount}
                       onChange={(e) => handleInputChange(entry.surveyEntryId, 'stockOutCount', parseInt(e.target.value) || 0)}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
+                      disabled={isViewOnly}
+                      className={`w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary ${isViewOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       placeholder="Enter stock out count"
                     />
                   </div>
@@ -380,13 +409,14 @@ const SurveyEntryPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Rack Clean</label>
                     <div className="flex gap-3">
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isRackClean ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
-                        }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isRackClean ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`rackClean-${entry.surveyEntryId}`}
                           checked={data.isRackClean === true}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isRackClean', true)}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isRackClean ? 'text-green-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -394,13 +424,14 @@ const SurveyEntryPage: React.FC = () => {
                         </svg>
                         <span className="text-sm font-medium">Yes</span>
                       </label>
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isRackClean === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
-                        }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isRackClean === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`rackClean-${entry.surveyEntryId}`}
                           checked={data.isRackClean === false}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isRackClean', false)}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isRackClean === false ? 'text-red-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -415,13 +446,14 @@ const SurveyEntryPage: React.FC = () => {
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Board Available</label>
                     <div className="flex gap-3">
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
-                        }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isBoardAvailable ? 'bg-green-50 border-green-300 text-green-800' : 'border-border hover:bg-muted/50'
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`boardAvailable-${entry.surveyEntryId}`}
                           checked={data.isBoardAvailable === true}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isBoardAvailable', true)}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isBoardAvailable ? 'text-green-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -429,13 +461,14 @@ const SurveyEntryPage: React.FC = () => {
                         </svg>
                         <span className="text-sm font-medium">Yes</span>
                       </label>
-                      <label className={`flex-1 flex items-center justify-center gap-2 p-3 border rounded-lg cursor-pointer transition-colors ${data.isBoardAvailable === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
-                        }`}>
+                      <label className={`flex-1 flex items-center justify-center gap-2 px-3 py-2 border rounded-lg transition-colors ${data.isBoardAvailable === false ? 'bg-red-50 border-red-300 text-red-800' : 'border-border hover:bg-muted/50'
+                        } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                         <input
                           type="radio"
                           name={`boardAvailable-${entry.surveyEntryId}`}
                           checked={data.isBoardAvailable === false}
                           onChange={() => handleInputChange(entry.surveyEntryId, 'isBoardAvailable', false)}
+                          disabled={isViewOnly}
                           className="sr-only"
                         />
                         <svg className={`w-5 h-5 ${data.isBoardAvailable === false ? 'text-red-600' : 'text-muted-foreground'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -447,21 +480,21 @@ const SurveyEntryPage: React.FC = () => {
                   </div>
 
                   {/* Entry Status */}
-                  {/* {['NOT_STARTED', 'IN_PROGRESS', 'COMPLETED', 'SKIPPED'] */}
                   <div>
                     <label className="block text-sm font-medium text-foreground mb-2">Status</label>
                     <div className="grid grid-cols-2 gap-3">
                       {['IN_PROGRESS', 'COMPLETED'].map(status => (
-                        <label key={status} className={`p-2 border text-center rounded-lg cursor-pointer transition-colors ${data.entryStatus === status ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted/50'
-                          }`}>
+                        <label key={status} className={`p-2 border text-center rounded-lg transition-colors ${data.entryStatus === status ? 'bg-primary/10 border-primary text-primary' : 'border-border hover:bg-muted/50'
+                          } ${isViewOnly ? 'cursor-not-allowed' : 'cursor-pointer'}`}>
                           <input
                             type="radio"
                             name={`entryStatus-${entry.surveyEntryId}`}
                             checked={data.entryStatus === status}
                             onChange={() => handleInputChange(entry.surveyEntryId, 'entryStatus', status)}
+                            disabled={isViewOnly}
                             className="sr-only"
                           />
-                          <span className="text-sm font-medium">{status.replace('_', ' ')}</span>
+                          <span className="text-sm font-medium">{status == "IN_PROGRESS" ? 'In Progess' : 'Completed'}</span>
                         </label>
                       ))}
                     </div>
@@ -475,7 +508,8 @@ const SurveyEntryPage: React.FC = () => {
                     <textarea
                       value={data.actionTaken}
                       onChange={(e) => handleInputChange(entry.surveyEntryId, 'actionTaken', e.target.value)}
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none"
+                      readOnly={isViewOnly}
+                      className={`w-full px-3 py-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-none ${isViewOnly ? 'opacity-60 cursor-not-allowed' : ''}`}
                       rows={2}
                       placeholder="Enter action taken (optional)"
                     />
@@ -491,25 +525,31 @@ const SurveyEntryPage: React.FC = () => {
                   }
 
                   {/* Submit Button */}
-                  <button
-                    onClick={() => handleSubmitEntry(entry)}
-                    disabled={submitting[entry.surveyEntryId] || data.entryStatus === 'NOT_STARTED' || data.entryStatus === 'SKIPPED'}
-                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  >
-                    {submitting[entry.surveyEntryId] ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        Saving...
-                      </>
-                    ) : (
-                      <>
-                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        Submit
-                      </>
-                    )}
-                  </button>
+                  {isViewOnly ? (
+                    <div className="w-full px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium text-center cursor-not-allowed">
+                      View Only — cannot update entries
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => handleSubmitEntry(entry)}
+                      disabled={submitting[entry.surveyEntryId] || data.entryStatus === 'NOT_STARTED' || data.entryStatus === 'SKIPPED'}
+                      className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      {submitting[entry.surveyEntryId] ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                          </svg>
+                          Submit
+                        </>
+                      )}
+                    </button>
+                  )}
                 </div>
               </div>
             )

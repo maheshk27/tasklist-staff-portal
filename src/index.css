@@ -162,3 +162,119 @@
     --shadow-2xl: var(--shadow-2xl);
   }
 }
+/* =====================================================================
+   Auth & shared page enhancements (login / forgot-password / reset)
+   ===================================================================== */
+
+/* ---- Entrance animations ---- */
+@keyframes auth-fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-auth-fade-up {
+  animation: auth-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.animate-auth-fade-up-d1 {
+  animation: auth-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.08s both;
+}
+.animate-auth-fade-up-d2 {
+  animation: auth-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.16s both;
+}
+.animate-auth-fade-up-d3 {
+  animation: auth-fade-up 0.6s cubic-bezier(0.22, 1, 0.36, 1) 0.24s both;
+}
+
+/* ---- Warm brand gradient for the login showcase panel ---- */
+.auth-brand-bg {
+  background-image:
+    radial-gradient(1100px 520px at -12% -12%, color-mix(in oklab, var(--primary) 62%, #ffffff) 0%, transparent 62%),
+    radial-gradient(920px 500px at 112% 6%, color-mix(in oklab, var(--accent) 48%, transparent) 0%, transparent 58%),
+    linear-gradient(155deg, var(--primary) 0%, color-mix(in oklab, var(--primary) 72%, #7d1d00) 55%, color-mix(in oklab, var(--primary) 38%, #290a00) 100%);
+}
+
+/* ---- Subtle tinted backdrop for the auth form side ---- */
+.auth-page-bg {
+  background-color: var(--background);
+  background-image:
+    radial-gradient(760px 420px at 100% -8%, color-mix(in oklab, var(--primary) 10%, transparent) 0%, transparent 62%),
+    radial-gradient(760px 440px at -6% 108%, color-mix(in oklab, var(--accent) 15%, transparent) 0%, transparent 62%);
+}
+
+/* =====================================================================
+   Dropdown & <select> — Safari-compatible styling
+   ===================================================================== */
+
+/* The project uses native <select> elements for filters/forms. Safari
+   renders its own OS-level arrow and chrome; reset it so every browser
+   shares one consistent, theme-aware chevron and look. */
+select {
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
+
+  background-color: transparent;
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2364748b' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1.05em 1.05em;
+
+  /* Keep the selected option clear of the chevron */
+  padding-right: 2.5rem;
+
+  /* Safari-safe vertical centering of the selected value */
+  line-height: normal;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  cursor: pointer;
+
+  /* Remove Safari's default focus outline (Tailwind focus ring handles it) */
+  outline: none;
+}
+
+/* Higher-contrast chevron in dark mode */
+.dark select {
+  background-image: url("data:image/svg+xml;charset=utf-8,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
+/* Disabled state */
+select:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* Option colors — applied in Chrome/Firefox; Safari renders its native
+   OS menu and safely ignores these rules. */
+option {
+  background-color: var(--popover);
+  color: var(--popover-foreground);
+}
+
+/* Custom dropdown panels / popovers (TaskActionsMenu, user menu,
+   column-visibility popover, etc.). Safari needs the WebKit-prefixed
+   backdrop filter and touch scrolling, plus predictable stacking. */
+.tk-dropdown-panel,
+[role='menu'],
+[role='listbox'] {
+  -webkit-backdrop-filter: saturate(180%) blur(14px);
+  backdrop-filter: saturate(180%) blur(14px);
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  will-change: transform, opacity;
+}
+
+/* Keep an already-open dropdown glued to its trigger while a parent uses
+   a backdrop-filter (Safari renders native <select> menus in the wrong
+   place inside filtered/fixed containers). */
+@supports (-webkit-backdrop-filter: blur(0)) {
+  select:not(:disabled) {
+    -webkit-transform: translateZ(0);
+    transform: translateZ(0);
+  }
+}

@@ -4,13 +4,20 @@ interface FormFieldProps {
   label: string
   name: string
   value: string
-  onChange: (e: React.ChangeEvent<HTMLInputElement>) => void
-  type?: 'text' | 'email' | 'tel' | 'password' | 'date'
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => void
+  type?: 'text' | 'email' | 'tel' | 'password' | 'date' | 'textarea'
   placeholder?: string
   error?: string
   required?: boolean
   disabled?: boolean
   showPasswordToggle?: boolean
+  minLength?: number
+  maxLength?: number
+  max?: string
+  min?: string
+  icon?: React.ReactNode
+  rows?: number
+  className?: string
 }
 
 const FormField: React.FC<FormFieldProps> = ({
@@ -23,7 +30,14 @@ const FormField: React.FC<FormFieldProps> = ({
   error,
   required = false,
   disabled = false,
-  showPasswordToggle = false
+  showPasswordToggle = false,
+  minLength,
+  maxLength,
+  max,
+  min,
+  icon,
+  rows,
+  className = ''
 }) => {
   const [isPasswordVisible, setIsPasswordVisible] = useState(false)
 
@@ -42,25 +56,48 @@ const FormField: React.FC<FormFieldProps> = ({
   }
 
   return (
-    <div className="space-y-2">
-      <label htmlFor={name} className="block text-sm font-medium">
+    <div className={`space-y-2 ${className}`}>
+      <label htmlFor={name} className="block text-sm font-medium text-foreground">
         {label}
         {required && <span className="text-red-500 ml-1">*</span>}
       </label>
       <div className="relative">
-        <input
-          type={getInputType()}
+        {icon && (
+          <span className="absolute inset-y-0 left-0 pl-3.5 flex items-center pointer-events-none text-muted-foreground">
+            {icon}
+          </span>
+        )}
+        {type === 'textarea' ? <textarea
           id={name}
           name={name}
           value={value}
           onChange={onChange}
-          className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent ${
-            error ? 'border-red-500' : 'border-border'
-          } ${shouldShowPasswordToggle ? 'pr-10' : ''}`}
+          className={`w-full px-3 rounded-lg border bg-background text-foreground placeholder: py-3 placeholder: text-sm placeholder:text-muted-foreground shadow-xs transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary/60 focus:shadow-sm ${error ? 'border-red-500' : 'border-border'
+            } ${icon ? 'pl-11' : ''} ${shouldShowPasswordToggle ? 'pr-11' : ''}`}
           placeholder={placeholder}
           disabled={disabled}
           required={required}
-        />
+          minLength={minLength}
+          maxLength={maxLength}
+          rows={rows}
+        /> :
+          <input
+            type={getInputType()}
+            id={name}
+            name={name}
+            value={value}
+            onChange={onChange}
+            className={`w-full h-11 px-3 rounded-lg border bg-background text-foreground placeholder: text-sm placeholder:text-muted-foreground shadow-xs transition-all focus:ring-2 focus:ring-primary/40 focus:border-primary/60 focus:shadow-sm ${error ? 'border-red-500' : 'border-border'
+              } ${icon ? 'pl-11' : ''} ${shouldShowPasswordToggle ? 'pr-11' : ''}`}
+            placeholder={placeholder}
+            disabled={disabled}
+            required={required}
+            minLength={minLength}
+            maxLength={maxLength}
+            max={max}
+            min={min}
+          />
+        }
         {shouldShowPasswordToggle && (
           <button
             type="button"
@@ -75,14 +112,19 @@ const FormField: React.FC<FormFieldProps> = ({
             ) : (
               <svg className="w-5 h-5 text-muted-foreground hover:text-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0-8.268-2.943-9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
               </svg>
             )}
           </button>
         )}
       </div>
       {error && (
-        <p className="text-red-600 text-sm">{error}</p>
+        <p className="text-red-600 text-sm flex items-center gap-1.5">
+          <svg className="w-3.5 h-3.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M18 10A8 8 0 112 10a8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+          </svg>
+          {error}
+        </p>
       )}
     </div>
   )

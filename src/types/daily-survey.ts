@@ -1,3 +1,17 @@
+/**
+ * Master daily survey (catalogue entry) — used by the reports' "Survey" filter
+ * (`GET /daily-surveys`).
+ */
+export interface DailySurvey {
+  surveyId: number
+  surveyName: string
+  isActive: boolean
+  scheduleDays?: string[]
+  weekOfMonth?: number
+  createdAt: string
+  updatedAt: string
+}
+
 export interface SurveyWithStatus {
   surveyId: number
   surveyName: string

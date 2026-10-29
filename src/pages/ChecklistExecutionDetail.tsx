@@ -1,39 +1,72 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import toast from 'react-hot-toast'
+import {
+  ChevronLeft,
+  Clock,
+  Download,
+  Hourglass,
+  PlayCircle,
+  CircleCheckBig,
+  PartyPopper,
+  BadgeCheck,
+  MapPin,
+  Lock,
+  Paperclip,
+  X,
+  FileText,
+  ShieldCheck,
+  Flag,
+  StoreIcon,
+  UserRound,
+} from 'lucide-react'
 import { taskService } from '../services/apiManager'
 import { decodeToken, getStoredTokens } from '../utils/auth'
 import type { TaskChecklistExecution, ChecklistStatus } from '../types/task-checklist-execution'
+import { CHECKLIST_STATUS_COLORS, CHECKLIST_STATUS_LABELS, CHECKLIST_PRIORITY_LABELS } from '../types/task-checklist-execution'
+import type { TaskExecution } from '../types/task-execution'
 import type { EvidenceResponseDto } from '../types/evidence'
 import { getEvidenceFileIcon, isImageFile } from '../types/evidence'
 import { ActionButton } from '../components/ui/ActionButton'
+import PageHeader from '../components/PageHeader'
+import { getPriorityColor } from '../utils/priority'
 import { formatDateTime, formatTime, isTimeToStart } from '../utils/date'
+import { getChecklistDelayNote } from '../utils/execution-delay'
+import { downloadFile } from '../utils/file-download'
+import { DelayNote } from '../components/BaseCard'
 
 const fileUploadBaseUrl = import.meta.env.VITE_FILE_UPLOAD_BASE_URL || ''
 
-// Helper to get the badge color for a checklist priority
-const getPriorityColor = (priority?: string): string => {
-  switch (priority) {
-    case 'CRITICAL': return 'bg-red-100 text-red-700'
-    case 'HIGH': return 'bg-orange-100 text-orange-700'
-    case 'MEDIUM': return 'bg-yellow-100 text-yellow-700'
-    case 'LOW': return 'bg-green-100 text-green-700'
-    default: return 'bg-gray-100 text-gray-600'
-  }
-}
-
 interface ChecklistExecutionDetailProps {
   readOnly?: boolean
+  /** When used as embedded modal content, pass the checklist execution ID as a prop */
+  checklistExecutionIdProp?: number
+  /** Parent task execution ID (page mode reads it from the route instead) */
+  taskExecutionIdProp?: number
+  /** Called when the back/close action is triggered (embedded modal mode) */
+  onClose?: () => void
 }
 
 //type checklistExecution?.checklistStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED' | 'OVERDUE';
 
-const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ readOnly = false }) => {
-  const { taskExecutionId, checklistExecutionId } = useParams<{
+const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({
+  readOnly = false,
+  checklistExecutionIdProp,
+  taskExecutionIdProp,
+  onClose,
+}) => {
+  const params = useParams<{
     taskExecutionId: string
     checklistExecutionId: string
   }>()
   const navigate = useNavigate()
+
+  // Resolve the IDs from props (embedded modal mode) or from the URL params
+  // (page mode). They stay strings so the rest of the component, which parses
+  // them with Number(), works unchanged in both modes.
+  const taskExecutionId = taskExecutionIdProp != null ? String(taskExecutionIdProp) : params.taskExecutionId
+  const checklistExecutionId = checklistExecutionIdProp != null ? String(checklistExecutionIdProp) : params.checklistExecutionId
+  const isModalMode = checklistExecutionIdProp !== undefined
   const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Checklist state
@@ -49,6 +82,8 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
   const [evidenceList, setEvidenceList] = useState<EvidenceResponseDto[]>([])
   const [isLoadingEvidence, setIsLoadingEvidence] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+  // ID of the non-image evidence file currently being downloaded
+  const [downloadingEvidenceId, setDownloadingEvidenceId] = useState<number | null>(null)
 
   // Action state
   const [isStarting, setIsStarting] = useState(false)
@@ -62,6 +97,9 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
   // Delete evidence confirmation
   const [deleteConfirmId, setDeleteConfirmId] = useState<number | null>(null)
+
+  // Parent task execution — used for assignee details in the Activity card
+  const [parentTask, setParentTask] = useState<TaskExecution | null>(null)
 
   // Fetch checklist execution
   const fetchChecklistExecution = useCallback(async () => {
@@ -105,8 +143,28 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
     fetchEvidence()
   }, [fetchEvidence])
 
+  // Fetch parent task execution for assignee details (the checklist response does not include it)
+  useEffect(() => {
+    if (!taskExecutionId) return
+    let cancelled = false
+    taskService.getTaskExecution(Number(taskExecutionId))
+      .then((res) => {
+        if (!cancelled && res.data) setParentTask(res.data)
+      })
+      .catch(() => { /* assignee details are optional — skip silently */ })
+    return () => { cancelled = true }
+  }, [taskExecutionId])
+
   const isLocked = checklistExecution?.checklistStatus === 'COMPLETED' || readOnly
   const isReadOnly = checklistExecution?.checklistStatus !== 'IN_PROGRESS' || readOnly
+
+  // Date check - only allow actions on today's date
+  const today = new Date().toLocaleDateString('en-CA')
+  const executionDate = checklistExecution?.fromTime
+    ? new Date(checklistExecution.fromTime).toLocaleDateString('en-CA')
+    : null
+  const isTodayChecklist = executionDate === today
+  const isActionAllowed = !readOnly && isTodayChecklist && (checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE')
 
   // Get current userId from token
   const getCurrentUserId = (): number | null => {
@@ -238,8 +296,26 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
     setIsUploading(false)
   }
 
-  // Navigate back based on readOnly mode
+  // Download a non-image evidence file (PDF / Excel / CSV / text)
+  const handleDownloadEvidence = async (evidence: EvidenceResponseDto) => {
+    if (downloadingEvidenceId !== null) return
+    setDownloadingEvidenceId(evidence.taskEvidenceId)
+    try {
+      await downloadFile(
+        `${fileUploadBaseUrl}/${evidence.evidenceUrl}`,
+        evidence.fileName,
+      )
+    } finally {
+      setDownloadingEvidenceId(null)
+    }
+  }
+
+  // Navigate back based on readOnly mode (embedded modal mode just closes)
   const goBack = () => {
+    if (isModalMode && onClose) {
+      onClose()
+      return
+    }
     if (readOnly) {
       navigate(taskExecutionId ? `/team-tasks/${taskExecutionId}` : '/team-tasks')
     } else {
@@ -247,16 +323,16 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
     }
   }
 
+  // Navigate to the mapped task execution ('/my-tasks/:id' or '/team-tasks/:id')
+  const goToTask = () => {
+    if (!taskExecutionId) return
+    navigate(readOnly ? `/team-tasks/${taskExecutionId}` : `/my-tasks/${taskExecutionId}`)
+  }
+
   // Loading
   if (isLoading) {
     return (
       <div className="space-y-6">
-        <button
-          onClick={goBack}
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
-        >
-          ← Back to Task
-        </button>
         <div className="flex items-center justify-center py-12">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
         </div>
@@ -270,9 +346,10 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
       <div className="space-y-6">
         <button
           onClick={goBack}
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
         >
-          ← Back to Task
+          <ChevronLeft className="h-4 w-4" />
+          Back to Task
         </button>
         <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
           <p className="text-destructive text-sm">{error || 'Checklist execution not found'}</p>
@@ -283,54 +360,132 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
 
   // Derived checklist config from the linked TaskChecklist
   const checklistPriority = checklistExecution.taskChecklist?.priority
+  const checklistPriorityLabel = checklistPriority ? CHECKLIST_PRIORITY_LABELS[checklistPriority as keyof typeof CHECKLIST_PRIORITY_LABELS] : undefined
   const isProofMandatory = checklistExecution.taskChecklist?.proofMandatory === true
   const uploadType = checklistExecution.taskChecklist?.uploadType || 'PHOTO'
   const isPhotoUpload = uploadType === 'PHOTO'
+  const checklistStatusColor = CHECKLIST_STATUS_COLORS[checklistExecution.checklistStatus] || 'bg-gray-100 text-gray-800'
+  const checklistStatusLabel = CHECKLIST_STATUS_LABELS[checklistExecution.checklistStatus] || checklistExecution.checklistStatus
+  const checklistDelayNote = getChecklistDelayNote(checklistExecution)
 
   return (
     <div className="space-y-6">
-      {/* Header with back */}
-      <div className="flex items-center justify-between">
+      {/* Page header (back only; hidden when embedded in the reports modal) */}
+      {!isModalMode && (
         <button
           onClick={goBack}
-          className="text-sm text-muted-foreground hover:text-foreground flex items-center gap-1"
+          className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-2 text-sm font-medium text-muted-foreground transition-colors hover:bg-primary/10 hover:text-primary"
         >
-          ← Back to Task
+          <ChevronLeft className="h-4 w-4" />
+          Back to {readOnly ? 'Team Tasks' : 'My Tasks'}
         </button>
-        <span className="text-xs text-muted-foreground">
-          ID: #{checklistExecution.taskChecklistExecutionId}
-        </span>
-      </div>
+      )}
+      {!isModalMode && (
+        <PageHeader
+          title="Checklist Execution"
+          subtitle="View and manage your assigned checklist"
+        />
+      )}
+
+      {/* Action Buttons — Start / Complete Task */}
+      {!readOnly && (
+        <div className="flex flex-col sm:flex-row gap-3 justify-end">
+          {checklistExecution?.checklistStatus === 'NOT_STARTED' && (
+            <>
+              {isTodayChecklist ? (
+                isTimeToStart(checklistExecution.fromTime) ? (
+                  <ActionButton
+                    action="signin"
+                    layout="grid"
+                    title="Start Task"
+                    onClick={handleStartTask}
+                    disabled={isStarting}
+                  />
+                ) : (
+                  <ActionButton
+                    action="signin"
+                    layout="grid"
+                    title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                    disabled={true}
+                  />
+                )
+              ) : (
+                <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                  <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                  </svg>
+                  <span className="text-sm text-yellow-700">Historical checklist - actions not allowed</span>
+                </div>
+              )}
+            </>
+          )}
+
+          {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
+            isTodayChecklist ? (
+              <ActionButton
+                action="activate"
+                layout="grid"
+                title="Complete Task"
+                onClick={() => {
+                  if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                    toast.error('Please upload the required evidence before completing this checklist.')
+                    return
+                  }
+                  setShowCompleteConfirm(true)
+                }}
+                disabled={isCompleting}
+              />
+            ) : (
+              <div className="flex items-center gap-2 px-4 py-2 bg-yellow-50 border border-yellow-200 rounded-lg">
+                <svg className="w-5 h-5 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                </svg>
+                <span className="text-sm text-yellow-700">Historical checklist - actions not allowed</span>
+              </div>
+            )
+          )}
+        </div>
+      )}
 
       {/* ==== Checklist Info Card ==== */}
-      <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-        <div className="bg-gradient-to-r from-primary/5 to-primary/10 px-6 py-5 border-b border-border">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-xl font-bold text-foreground truncate">
-                {checklistExecution.taskChecklist?.title || `Checklist #${checklistExecution.mstChecklistId}`}
-              </h1>
-              {checklistExecution.taskChecklist?.regionalText && (
-                <p className="text-sm text-muted-foreground mt-1">{checklistExecution.taskChecklist.regionalText}</p>
-              )}
-              {checklistExecution.taskChecklist?.isMandatory && (
-                <span className="inline-flex items-center gap-1 mt-1.5 text-xs font-medium text-red-600 bg-red-50 px-2 py-0.5 rounded-full">
-                  <span>●</span> Mandatory
-                </span>
-              )}
-              {checklistPriority && (
-                <span className={`inline-flex items-center gap-1 mt-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${getPriorityColor(checklistPriority)}`}>
-                  🚩 {checklistPriority}
-                </span>
-              )}
-            </div>
-          </div>
-        </div>
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="p-4 space-y-3">
+          {/* Title */}
+          <h1 className="text-lg font-medium text-foreground leading-tight">
+            {checklistExecution.taskChecklist?.title || `Checklist #${checklistExecution.mstChecklistId}`}
+          </h1>
 
-        <div className="p-6 space-y-4">
+          {/* Regional text */}
+          {checklistExecution.taskChecklist?.regionalText && (
+            <p className="text-md text-muted-foreground">{checklistExecution.taskChecklist.regionalText}</p>
+          )}
+
+          {/* Meta strip — scheduled time, mapped task, ID */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 px-4 py-2.5 text-sm text-muted-foreground">
+            {checklistExecution.fromTime && (
+              <span className="inline-flex items-center gap-1.5">
+                <Clock className="h-3.5 w-3.5" />
+                {formatDateTime(checklistExecution.fromTime)}
+                {checklistExecution.toTime ? ` - ${formatTime(checklistExecution.toTime)}` : ''}
+              </span>
+            )}
+            <button
+              onClick={goToTask}
+              className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-primary hover:underline"
+              title={`View task #${taskExecutionId}`}
+            >
+              <MapPin className="h-3.5 w-3.5" />
+              {taskExecutionId ? `Mapped Task: #${taskExecutionId}` : 'Mapped Task: —'}
+            </button>
+            <span className="inline-flex items-center gap-1.5">
+              <BadgeCheck className="h-3.5 w-3.5" />
+              ID: #{checklistExecution.taskChecklistExecutionId}
+            </span>
+          </div>
+
           {/* Description */}
           {checklistExecution.taskChecklist?.description && (
-            <div>
+            <div className="">
               <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
                 Description
               </label>
@@ -338,260 +493,43 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
             </div>
           )}
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {/* Time range */}
-            {checklistExecution.fromTime && (
-              <div>
-                <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                  Scheduled Time
-                </label>
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <span>🕐</span>
-                  <span>
-                    {formatDateTime(checklistExecution.fromTime)}
-                    {checklistExecution.toTime ? ` - ${formatTime(checklistExecution.toTime)}` : ''}
-                  </span>
-                </div>
-              </div>
+          {/* Badges — mandatory, priority, status */}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium ${checklistStatusColor}`}>
+              {checklistStatusLabel}
+            </span>
+            {checklistExecution.taskChecklist?.isMandatory && (
+              <span className="inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium text-red-600 bg-red-50">
+                Mandatory
+              </span>
             )}
-            {/* Status */}
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                Status
-              </label>
-              <div className="flex items-center gap-2">
-                {/* <div className={`w-2.5 h-2.5 rounded-full ${checklistExecution?.checklistStatus === 'COMPLETED' ? 'bg-green-500' :
-                  checklistExecution?.checklistStatus === 'IN_PROGRESS' ? 'bg-blue-500' : 'bg-yellow-500'
-                  }`} />
-                <span className="text-sm font-medium text-foreground">
-                  {checklistExecution?.checklistStatus === 'NOT_STARTED' ? 'Not Started' :
-                    checklistExecution?.checklistStatus === 'IN_PROGRESS' ? 'In Progress' : 'Completed'}
-                </span> */}
-                <span className="text-sm font-medium text-foreground">
-                  {checklistExecution?.checklistStatus}
-                </span>
-              </div>
-            </div>
-            {/* Parent Master Task */}
-            <div>
-              <label className="block text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1.5">
-                Mapped Task
-              </label>
-              <button
-                onClick={goBack}
-                className="text-sm text-primary hover:underline"
-              >
-                View Task #{taskExecutionId}
-              </button>
-            </div>
+            {checklistPriority && (
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-sm font-medium ${getPriorityColor(checklistPriority)}`}>
+                {checklistPriorityLabel || checklistPriority}
+              </span>
+            )}
           </div>
-        </div>
-      </div>
-
-      {/* ==== Activity Card (Action + Timeline + Completed By) ==== */}
-      <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-border">
-          <h2 className="text-base font-semibold text-foreground">Activity</h2>
-        </div>
-        <div className="p-6">
-          {/* Action section — hidden when readOnly */}
-          {!readOnly && (
-            <div className="mb-6 pb-6 border-b border-border">
-              {(checklistExecution?.checklistStatus === 'NOT_STARTED') && (
-                <div className="text-center">
-                  <div className="text-3xl mb-3">⏳</div>
-                  {isTimeToStart(checklistExecution.fromTime) ? (
-                    <>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        This checklist is {checklistExecution?.checklistStatus == 'NOT_STARTED' ? 'pending' : 'overdue'}. Start it to begin working.
-                      </p>
-                      <ActionButton
-                        action="signin"
-                        layout="grid"
-                        title="Start Task"
-                        onClick={handleStartTask}
-                        disabled={isStarting}
-                      />
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-sm text-orange-500 font-medium mb-1">
-                        ⏰ Checklist starts at {formatTime(checklistExecution.fromTime)}
-                      </p>
-                      <p className="text-xs text-muted-foreground mb-4">
-                        Please wait until the scheduled start time to begin.
-                      </p>
-                      <ActionButton
-                        action="signin"
-                        layout="grid"
-                        title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
-                        //onClick={handleStartTask}
-                        disabled={true}
-                      />
-                    </>
-                  )}
-                </div>
-              )}
-
-              {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && checklistExecution.startedAt && (
-                <div className="text-center">
-                  <div className="text-3xl mb-3">🔄</div>
-                  <p className="text-sm text-muted-foreground mb-1">
-                    Task is in {checklistExecution?.checklistStatus == 'IN_PROGRESS' ? 'progress' : 'overdue'}.
-                  </p>
-                  {checklistExecution.startedAt && (
-                    <p className="text-xs text-muted-foreground mb-4">
-                      Started at: {formatDateTime(checklistExecution.startedAt)}
-                    </p>
-                  )}
-                  <ActionButton
-                    action="activate"
-                    layout="grid"
-                    title="Complete Task"
-                    onClick={() => {
-                      if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
-                        toast.error('Please upload the required evidence before completing this checklist.')
-                        return
-                      }
-                      setShowCompleteConfirm(true)
-                    }}
-                    disabled={isCompleting}
-                  />
-                </div>
-              )}
-
-              {checklistExecution?.checklistStatus === 'COMPLETED' && (
-                <div className="text-center">
-                  <div className="text-3xl mb-3">🎉</div>
-                  <p className="text-sm text-green-600 font-medium">Checklist completed</p>
-                  {checklistExecution.completedAt && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Completed at: {formatDateTime(checklistExecution.completedAt)}
-                    </p>
-                  )}
-                  {checklistExecution.completedByUser && (
-                    <p className="text-xs text-muted-foreground">
-                      by {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
-                    </p>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Timeline section */}
-          <div className="mb-6 pb-6 border-b border-border">
-            <h3 className="text-sm font-semibold text-foreground mb-4">Timeline</h3>
-            <div className="relative">
-              <div className="absolute left-[7px] top-1 bottom-1 w-0.5 bg-border" />
-              <div className="space-y-6 relative">
-                <div className="flex items-start gap-4">
-                  <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${checklistExecution?.checklistStatus === 'NOT_STARTED' ? 'bg-gray-300 ring-gray-100' : 'bg-blue-500 ring-blue-100'
-                      }`} />
-                  </div>
-                  <div className="flex-1 pt-0">
-                    <p className="text-sm font-medium text-foreground">Started</p>
-                    {checklistExecution.startedAt ? (
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {formatDateTime(checklistExecution.startedAt)}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic mt-0.5">Not started yet</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-start gap-4">
-                  <div className="w-[17px] shrink-0 flex justify-center relative z-10">
-                    <div className={`w-3 h-3 rounded-full ring-2 ${checklistExecution?.checklistStatus === 'COMPLETED' ? 'bg-green-500 ring-green-100' : 'bg-gray-300 ring-gray-100'
-                      }`} />
-                  </div>
-                  <div className="flex-1 pt-0">
-                    <p className="text-sm font-medium text-foreground">Completed</p>
-                    {checklistExecution.completedAt ? (
-                      <p className="text-sm text-muted-foreground mt-0.5">
-                        {formatDateTime(checklistExecution.completedAt)}
-                      </p>
-                    ) : (
-                      <p className="text-sm text-muted-foreground italic mt-0.5">Not completed yet</p>
-                    )}
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Completed By section */}
-          {checklistExecution.completedByUser && (
-            <div>
-              <h3 className="text-sm font-semibold text-foreground mb-3">Completed By</h3>
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 bg-gradient-to-br from-primary to-primary/70 rounded-full flex items-center justify-center text-primary-foreground font-bold text-sm shadow-sm">
-                  {checklistExecution.completedByUser.firstName?.[0] || 'U'}
-                </div>
-                <div>
-                  <p className="font-medium text-foreground text-sm">
-                    {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
-                  </p>
-                  <p className="text-xs text-muted-foreground">@{checklistExecution.completedByUser.userName}</p>
-                </div>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* ==== Notes Card ==== */}
-      <div className="bg-card border border-border rounded-lg shadow-sm">
-        <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-          <h2 className="text-base font-semibold text-foreground">Notes</h2>
-          {isLocked && <span className="text-xs text-muted-foreground">🔒 Read-only</span>}
-        </div>
-        <div className="p-6">
-          <textarea
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder={isLocked ? "Notes are locked after completion." : checklistExecution?.checklistStatus === 'NOT_STARTED' ? "Start the task first to add notes." : "Add notes for this checklist item..."}
-            rows={3}
-            disabled={isReadOnly}
-            className="w-full p-3 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y disabled:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
-          />
-          {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
-            <div className="flex justify-end mt-3">
-              <button
-                onClick={handleSaveNotes}
-                disabled={isSavingNotes}
-                className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-primary/50 disabled:text-primary-foreground/50 disabled:cursor-not-allowed transition-colors"
-              >
-                {isSavingNotes ? (
-                  <span className="flex items-center gap-2">
-                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
-                    Saving...
-                  </span>
-                ) : (
-                  'Save Notes'
-                )}
-              </button>
-            </div>
-          )}
         </div>
       </div>
 
       {/* ==== Evidence Card — only shown when proof/evidence is mandatory ==== */}
       {isProofMandatory && (
-        <div className="bg-card border border-border rounded-lg shadow-sm">
-          <div className="px-6 py-4 border-b border-border flex items-center justify-between">
-            <h2 className="text-base font-semibold text-foreground">
-              Evidence Files
-              {evidenceList.length > 0 && (
-                <span className="ml-2 text-sm font-normal text-muted-foreground">
-                  ({evidenceList.length})
-                </span>
-              )}
-            </h2>
+        <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+          <div className="px-4 py-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <ShieldCheck className="h-4 w-4 text-primary" />
+              <h2 className="text-base font-semibold text-foreground">
+                Evidence Files
+                {evidenceList.length > 0 && (
+                  <span className="ml-2 text-sm font-normal text-muted-foreground">
+                    ({evidenceList.length})
+                  </span>
+                )}
+              </h2>
+            </div>
 
-            {/* Upload buttons — only when in_progress and not readOnly */}
-            {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
+            {/* Upload buttons — only when in_progress, not readOnly, and today's checklist */}
+            {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && !readOnly && isTodayChecklist && (
               <div className="flex items-center gap-2">
                 {isPhotoUpload ? (
                   <>
@@ -629,9 +567,7 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                         : 'hover:bg-muted'
                         }`}
                     >
-                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                      </svg>
+                      <FileText className="w-4 h-4" />
                       Documents
                     </label>
                   </>
@@ -640,10 +576,14 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
             )}
 
             {readOnly ? (
-              <span className="text-xs text-muted-foreground">🔒 Read-only view</span>
-            ) : checklistExecution?.checklistStatus !== 'IN_PROGRESS' && (
-              <span className="text-xs text-muted-foreground">
-                {isLocked ? '🔒 Locked' : 'Start the task to upload files'}
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                <Lock className="h-3.5 w-3.5" />
+                Read-only view
+              </span>
+            ) : checklistExecution?.checklistStatus === 'NOT_STARTED' && (
+              <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+                {isLocked ? <Lock className="h-3.5 w-3.5" /> : <Clock className="h-3.5 w-3.5" />}
+                {isLocked ? 'Locked' : 'Start the task to upload evidence files'}
               </span>
             )}
           </div>
@@ -655,11 +595,13 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
               </div>
             ) : evidenceList.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-3xl mb-3">📎</div>
+                <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                  <Paperclip className="h-7 w-7" />
+                </div>
                 <p className="text-sm text-muted-foreground">
                   {isLocked ? 'No evidence files were uploaded.' : checklistExecution?.checklistStatus === 'NOT_STARTED' ? 'Start the task to upload evidence files.' : 'No evidence files uploaded yet.'}
                 </p>
-                {checklistExecution?.checklistStatus === 'IN_PROGRESS' && (
+                {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
                   <p className="text-xs text-muted-foreground mt-1">
                     {isPhotoUpload
                       ? 'Click "Camera" to capture a photo or pick an image from your device.'
@@ -688,9 +630,28 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                         />
                       </button>
                     ) : (
-                      <div className="w-full aspect-square flex items-center justify-center bg-muted">
+                      <button
+                        type="button"
+                        onClick={() => handleDownloadEvidence(evidence)}
+                        disabled={downloadingEvidenceId !== null}
+                        className="w-full aspect-square flex flex-col items-center justify-center gap-2 bg-muted hover:bg-muted/70 transition-colors disabled:cursor-not-allowed disabled:opacity-60"
+                        title={`Download ${evidence.fileName || 'file'}`}
+                      >
                         <span className="text-3xl">{getEvidenceFileIcon(evidence.mimeType)}</span>
-                      </div>
+                        <span className="inline-flex items-center gap-1.5 rounded-md border border-border bg-background px-2 py-1 text-[11px] font-medium text-foreground">
+                          {downloadingEvidenceId === evidence.taskEvidenceId ? (
+                            <>
+                              <span className="h-3 w-3 animate-spin rounded-full border-b-2 border-current" />
+                              Downloading...
+                            </>
+                          ) : (
+                            <>
+                              <Download className="h-3 w-3" />
+                              Download
+                            </>
+                          )}
+                        </span>
+                      </button>
                     )}
 
                     <div className="p-2">
@@ -703,13 +664,13 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
                     </div>
 
                     {/* Remove button — only when in_progress and not readOnly */}
-                    {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
+                    {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && !readOnly && (
                       <button
                         onClick={() => setDeleteConfirmId(evidence.taskEvidenceId)}
                         className="absolute top-1 right-1 w-8 h-8 bg-destructive/80 text-destructive-foreground rounded-full flex items-center justify-center text-xs"
                         title="Remove"
                       >
-                        ✕
+                        <X className="h-4 w-4" />
                       </button>
                     )}
                   </div>
@@ -720,14 +681,312 @@ const ChecklistExecutionDetail: React.FC<ChecklistExecutionDetailProps> = ({ rea
         </div>
       )}
 
-      {/* ==== Created / Updated info ==== */}
-      <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border pt-4">
-        <span>Created: {formatDateTime(checklistExecution.createdAt)}</span>
-        <span>Updated: {formatDateTime(checklistExecution.updatedAt)}</span>
+      {/* ==== Activity Card (Action + Timeline + Completed By) ==== */}
+      <div className="bg-card border border-border rounded-lg shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-border">
+          <div className="flex items-center gap-2">
+            <Flag className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">Activity</h2>
+          </div>
+        </div>
+        <div className="p-4">
+          {/* Delay / completed-late warning */}
+          {checklistDelayNote && <div className="mb-4"><DelayNote text={checklistDelayNote} /></div>}
+
+          {/* Action + Timeline side by side (1 col mobile, 2 cols sm+) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Action section — hidden when readOnly */}
+            {!readOnly && (
+              <div className="h-full rounded-xl border border-border p-4">
+                {checklistExecution?.checklistStatus === 'NOT_STARTED' && (
+                  <div className="text-center">
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <Hourglass className="h-7 w-7" />
+                    </div>
+                    {isTodayChecklist ? (
+                      isTimeToStart(checklistExecution.fromTime) ? (
+                        <>
+                          <p className="text-sm text-muted-foreground mb-4">
+                            This checklist is pending. Start it to begin working.
+                          </p>
+                          <ActionButton
+                            action="signin"
+                            layout="grid"
+                            title="Start Task"
+                            onClick={handleStartTask}
+                            disabled={isStarting}
+                          />
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-orange-500 font-medium mb-1">
+                            Checklist starts at {formatTime(checklistExecution.fromTime)}
+                          </p>
+                          <p className="text-xs text-muted-foreground mb-4">
+                            Please wait until the scheduled start time to begin.
+                          </p>
+                          <ActionButton
+                            action="signin"
+                            layout="grid"
+                            title={`Starts at ${formatTime(checklistExecution.fromTime)}`}
+                            disabled={true}
+                          />
+                        </>
+                      )
+                    ) : (
+                      <>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          This is a historical checklist.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Actions can only be performed on today's checklists.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {(checklistExecution?.checklistStatus === 'IN_PROGRESS' || checklistExecution?.checklistStatus === 'OVERDUE') && (
+                  <div className="text-center">
+                    {isTodayChecklist ? (
+                      <>
+                        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-blue-100 text-blue-600">
+                          <PlayCircle className="h-7 w-7" />
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          Task is in {checklistExecution?.checklistStatus === 'IN_PROGRESS' ? 'progress' : 'overdue'}.
+                        </p>
+                        {checklistExecution.startedAt && (
+                          <p className="text-xs text-muted-foreground mb-4">
+                            Started at: {formatDateTime(checklistExecution.startedAt)}
+                          </p>
+                        )}
+                        <ActionButton
+                          action="activate"
+                          layout="grid"
+                          title="Complete Task"
+                          onClick={() => {
+                            if (checklistExecution?.taskChecklist?.proofMandatory === true && evidenceList.length === 0) {
+                              toast.error('Please upload the required evidence before completing this checklist.')
+                              return
+                            }
+                            setShowCompleteConfirm(true)
+                          }}
+                          disabled={isCompleting}
+                        />
+                      </>
+                    ) : (
+                      <>
+                        <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-yellow-100 text-yellow-600">
+                          <svg className="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z" />
+                          </svg>
+                        </div>
+                        <p className="text-sm text-muted-foreground mb-1">
+                          This is a historical checklist.
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          Actions can only be performed on today's checklists.
+                        </p>
+                      </>
+                    )}
+                  </div>
+                )}
+
+                {checklistExecution?.checklistStatus === 'COMPLETED' && (
+                  <div className="text-center">
+                    <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-full bg-green-100 text-green-600">
+                      <PartyPopper className="h-7 w-7" />
+                    </div>
+                    <p className="text-sm text-green-600 font-medium">Checklist completed</p>
+                    {checklistExecution.completedAt && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Completed at: {formatDateTime(checklistExecution.completedAt)}
+                      </p>
+                    )}
+                    {checklistExecution.completedByUser && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Completed by {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
+                      </p>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Timeline section — vertical stepper, responsive */}
+            <div className="h-full rounded-xl border border-border p-4">
+              <h3 className="text-sm font-semibold text-foreground mb-4">Timeline</h3>
+
+              {(() => {
+                const startedAt = checklistExecution.startedAt
+                const completedAt = checklistExecution.completedAt
+                const isCompleted = checklistExecution.checklistStatus === 'COMPLETED'
+
+                const steps = [
+                  {
+                    key: 'started',
+                    label: 'Started',
+                    value: startedAt ? formatDateTime(startedAt) : null,
+                    icon: <PlayCircle className="h-4 w-4" />,
+                    iconClass: 'bg-blue-100 text-blue-600 ring-2 ring-blue-100',
+                  },
+                  {
+                    key: 'completed',
+                    label: 'Completed',
+                    value: completedAt ? formatDateTime(completedAt) : null,
+                    icon: isCompleted
+                      ? <CircleCheckBig className="h-4 w-4" />
+                      : <BadgeCheck className="h-4 w-4" />,
+                    iconClass: isCompleted
+                      ? 'bg-green-100 text-green-600 ring-2 ring-green-100'
+                      : 'bg-muted text-muted-foreground ring-2 ring-muted',
+                  },
+                ]
+
+                return (
+                  <div className="relative">
+                    <div className="absolute left-[15px] top-0 bottom-0 w-0.5 bg-border" />
+                    <div className="space-y-6 relative">
+                      {steps.map((step) => (
+                        <div key={step.key} className="flex items-start gap-4">
+                          <div
+                            className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${step.iconClass}`}
+                          >
+                            {step.icon}
+                          </div>
+                          <div className="flex-1 pt-0.5">
+                            <p className="text-sm font-medium text-foreground">{step.label}</p>
+                            {step.value ? (
+                              <p className="text-sm text-muted-foreground mt-0.5">{step.value}</p>
+                            ) : (
+                              <p className="text-sm text-muted-foreground italic mt-0.5">Not {step.label.toLowerCase()} yet</p>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )
+              })()}
+            </div>
+          </div>
+
+          {/* Assignee Details */}
+          {(parentTask?.user || parentTask?.store) && (
+            <div className="mt-4 border-t border-border pt-4">
+              <h3 className="text-sm font-semibold text-foreground mb-3">Assignee Details</h3>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {parentTask?.user && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                      <UserRound className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {parentTask.user.firstName} {parentTask.user.lastName}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        @{parentTask.user.userName}
+                        {parentTask.user.emailId ? ` · ${parentTask.user.emailId}` : ''}
+                      </p>
+                    </div>
+                  </div>
+                )}
+
+                {parentTask?.store && (
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-muted text-muted-foreground">
+                      <StoreIcon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-foreground text-sm">
+                        {parentTask.store.storeName} ({parentTask.store.storeCode})
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {[parentTask.store.city, parentTask.store.state].filter(Boolean).join(', ')}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* Completed By section */}
+          {/* {checklistExecution.completedByUser && (
+            <div>
+              <h3 className="text-sm font-semibold text-foreground mb-3">Completed By</h3>
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-primary to-primary/70 text-primary-foreground">
+                  <UserRound className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-medium text-foreground text-sm">
+                    {checklistExecution.completedByUser.firstName} {checklistExecution.completedByUser.lastName}
+                  </p>
+                  <p className="text-xs text-muted-foreground">@{checklistExecution.completedByUser.userName}</p>
+                </div>
+              </div>
+            </div>
+          )} */}
+
+          {/* Created / Updated info */}
+          {checklistExecution && (
+            <div className="mt-5 border-t border-border pt-4 flex flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
+              <span>Created: {formatDateTime(checklistExecution.createdAt)}</span>
+              <span>Updated: {formatDateTime(checklistExecution.updatedAt)}</span>
+            </div>
+          )}
+        </div>
       </div>
 
-      {/* ==== Complete Confirmation Modal — hidden when readOnly */}
-      {!readOnly && showCompleteConfirm && (
+      {/* ==== Notes Card ==== */}
+      <div className="bg-card rounded-xl border border-border shadow-sm overflow-hidden">
+        <div className="px-4 py-3 border-b border-border flex flex-wrap items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Paperclip className="h-4 w-4 text-primary" />
+            <h2 className="text-base font-semibold text-foreground">Notes</h2>
+          </div>
+          {isLocked && (
+            <span className="inline-flex items-center gap-1 text-xs text-muted-foreground">
+              <Lock className="h-3.5 w-3.5" />
+              Read-only
+            </span>
+          )}
+        </div>
+        <div className="p-6">
+          <textarea
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            placeholder={isLocked ? "Notes are locked after completion." : checklistExecution?.checklistStatus === 'NOT_STARTED' ? "Start the task first to add notes." : "Add notes for this checklist item..."}
+            rows={3}
+            disabled={isReadOnly}
+            className="w-full p-3 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary resize-y disabled:bg-muted disabled:cursor-not-allowed disabled:opacity-70"
+          />
+          {checklistExecution?.checklistStatus === 'IN_PROGRESS' && !readOnly && (
+            <div className="flex justify-end mt-3">
+              <button
+                onClick={handleSaveNotes}
+                disabled={isSavingNotes}
+                className="px-4 py-2 text-sm font-medium rounded-md bg-primary text-primary-foreground hover:bg-primary/90 disabled:bg-primary/50 disabled:text-primary-foreground/50 disabled:cursor-not-allowed transition-colors"
+              >
+                {isSavingNotes ? (
+                  <span className="flex items-center gap-2">
+                    <div className="animate-spin rounded-full h-3.5 w-3.5 border-b-2 border-current"></div>
+                    Saving...
+                  </span>
+                ) : (
+                  'Save Notes'
+                )}
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ==== Complete Confirmation Modal — hidden when readOnly or historical ==== */}
+      {isActionAllowed && showCompleteConfirm && (
         <div
           className="fixed inset-0 z-50 bg-black/70 flex items-center justify-center p-4"
           onClick={() => setShowCompleteConfirm(false)}

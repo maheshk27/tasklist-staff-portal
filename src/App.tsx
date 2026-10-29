@@ -1,6 +1,8 @@
-import { Routes, Route } from 'react-router-dom'
+import { Routes, Route, useLocation, Navigate } from 'react-router-dom'
+import { useEffect, Suspense, lazy } from 'react'
 import { AuthProvider } from './contexts/AuthContext'
 import { Toaster } from 'react-hot-toast'
+import { useAuth } from './hooks/useAuth'
 import ProtectedRoute from './components/ProtectedRoute'
 import Layout from './components/layout/Layout'
 import Login from './modules/auth/pages/Login'
@@ -20,15 +22,72 @@ import ChecklistExecutionDetail from './pages/ChecklistExecutionDetail'
 import SurveyList from './pages/SurveyList'
 import SurveyEntryPage from './pages/SurveyEntry'
 import LoginLogs from './pages/LoginLogs'
+import StoreWiseChecklistCompletion from './modules/reports/pages/StoreWiseChecklistCompletion'
+import StoreWiseChecklistStatus from './modules/reports/pages/StoreWiseChecklistStatus'
+import StoreDateWiseChecklistCompletion from './modules/reports/pages/StoreDateWiseChecklistCompletion'
+import StoreSurveyDateWiseCompletion from './modules/reports/pages/StoreSurveyDateWiseCompletion'
+import NotFound from './pages/NotFound'
+import Loading from './components/Loading'
+
+// Analytics is a chart-heavy secondary page — load it on demand so its code
+// stays out of the initial bundle.
+const ReportsAnalytics = lazy(() => import('./pages/ReportsAnalytics'))
+
+// Redirect authenticated users to dashboard
+const PublicRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const { isAuthenticated, isLoading } = useAuth()
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background to-muted/30 flex items-center justify-center  text-center">
+        <div className="flex flex-col items-center gap-6">
+          <img 
+            src="/rk-logo.png" 
+            alt="RK Bazar Logo" 
+            className="w-80 object-contain"
+          />
+          <div className="flex flex-col items-center gap-2">
+            <h1 className="text-2xl font-bold tracking-tight">
+              Task Management Workflow
+            </h1>
+            <p className="font-semibold text-primary">Staff Portal</p>
+          </div>
+          <div className="flex items-center gap-2 mt-2">
+            <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
+            <p className="text-muted-foreground">Loading...</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  if (isAuthenticated) {
+    return <Navigate to="/dashboard" replace />
+  }
+
+  return <>{children}</>
+}
+
+// Scroll to top on route change
+const ScrollToTop: React.FC = () => {
+  const { pathname } = useLocation()
+
+  useEffect(() => {
+    window.scrollTo(0, 0)
+  }, [pathname])
+
+  return null
+}
 
 function App() {
 
   return (
     <AuthProvider>
+      <ScrollToTop />
       <Routes>
         {/* Public routes without layout */}
-        <Route path="/" element={<Login />} />
-        <Route path="/login" element={<Login />} />
+        <Route path="/" element={<PublicRoute><Login /></PublicRoute>} />
+        <Route path="/login" element={<PublicRoute><Login /></PublicRoute>} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
 
         {/* Protected routes with layout */}
@@ -98,6 +157,37 @@ function App() {
           </ProtectedRoute>
         } />
 
+        {/* Report routes */}
+        <Route path="/store-wise-checklist-completion" element={
+          <ProtectedRoute>
+            <Layout><StoreWiseChecklistCompletion /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/store-wise-checklist-status" element={
+          <ProtectedRoute>
+            <Layout><StoreWiseChecklistStatus /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/store-date-wise-checklist-completion" element={
+          <ProtectedRoute>
+            <Layout><StoreDateWiseChecklistCompletion /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/store-survey-date-wise-completion" element={
+          <ProtectedRoute>
+            <Layout><StoreSurveyDateWiseCompletion /></Layout>
+          </ProtectedRoute>
+        } />
+        <Route path="/reports-analytics" element={
+          <ProtectedRoute>
+            <Layout>
+              <Suspense fallback={<Loading message="Loading analytics..." />}>
+                <ReportsAnalytics />
+              </Suspense>
+            </Layout>
+          </ProtectedRoute>
+        } />
+
         {/* Ticket routes */}
         <Route path="/tickets" element={
           <ProtectedRoute>
@@ -119,14 +209,22 @@ function App() {
             <Layout><EditTicket /></Layout>
           </ProtectedRoute>
         } />
+
+        {/* 404 - Catch all unmatched routes */}
+        <Route path="*" element={<NotFound />} />
       </Routes>
       <Toaster
         position="top-right"
         toastOptions={{
           duration: 4000,
           style: {
-            background: '#363636',
-            color: '#fff',
+            // background: 'hsl(var(--card))',
+            // color: 'hsl(var(--foreground))',
+            border: '1px solid hsl(var(--border))',
+            borderRadius: '12px',
+            padding: '12px 16px',
+            fontSize: '14px',
+            boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
           },
           success: {
             duration: 3000,
@@ -134,12 +232,18 @@ function App() {
               primary: '#4ade80',
               secondary: '#fff',
             },
+            style: {
+              border: '1px solid rgba(74, 222, 128, 0.3)',
+            },
           },
           error: {
             duration: 5000,
             iconTheme: {
               primary: '#ef4444',
               secondary: '#fff',
+            },
+            style: {
+              border: '1px solid rgba(239, 68, 68, 0.3)',
             },
           },
         }}

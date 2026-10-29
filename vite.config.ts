@@ -5,6 +5,15 @@ import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
+  server: {
+    port: 5173,
+    strictPort: true,
+    hmr: {
+      protocol: 'ws',
+      host: 'localhost',
+      port: 5173,
+    },
+  },
   plugins: [
     react(),
     tailwindcss(),
@@ -13,11 +22,15 @@ export default defineConfig({
       srcDir: 'src',
       filename: 'sw.ts',
       registerType: 'autoUpdate',
+      devOptions: {
+        enabled: true,
+        type: 'classic',
+      },
       includeAssets: ['favicon.svg', 'rk-logo.png', 'icons.svg'],
       manifest: {
-        name: 'RK Bazar Staff Portal',
-        short_name: 'RK Bazar',
-        description: 'Staff task management portal for RK Bazar',
+        name: 'RK Bazar - Staff Portal',
+        short_name: 'RK Bazar - Staff Portal',
+        description: 'Task Management Application for RK Bazar',
         theme_color: '#F07A5A',
         background_color: '#ffffff',
         display: 'standalone',
@@ -26,21 +39,21 @@ export default defineConfig({
         start_url: '/',
         icons: [
           {
-            src: '/pwa-192x192.svg',
+            src: '/logo-192x192.png',
             sizes: '192x192',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/pwa-512x512.svg',
+            src: '/logo-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'any'
           },
           {
-            src: '/pwa-512x512.svg',
+            src: '/logo-512x512.png',
             sizes: '512x512',
-            type: 'image/svg+xml',
+            type: 'image/png',
             purpose: 'maskable'
           }
         ]

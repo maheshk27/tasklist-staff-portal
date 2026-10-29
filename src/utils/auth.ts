@@ -3,6 +3,8 @@
  * Used by staff portal
  */
 
+import type { User } from '../types/auth'
+
 export interface DecodedToken {
   userId: number
   userName: string
@@ -145,5 +147,50 @@ export function getStoredTokens(): { accessToken: string | null; refreshToken: s
   } catch (error) {
     console.error('Error getting stored tokens:', error)
     return { accessToken: null, refreshToken: null }
+  }
+}
+
+const USER_STORAGE_KEY = 'staff_user'
+
+/**
+ * Store the authenticated user details in localStorage
+ * (so Profile, Layout, etc. can use the full user profile —
+ * e.g. name, role — even after a page refresh, without relying only on
+ * the JWT-encoded subset of fields).
+ */
+export function storeUserDetails(user: User): boolean {
+  try {
+    localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(user))
+    return true
+  } catch (error) {
+    console.error('Error storing user details:', error)
+    return false
+  }
+}
+
+/**
+ * Get the stored user details from localStorage. Returns null when the
+ * stored value is missing or cannot be parsed.
+ */
+export function getStoredUserDetails(): User | null {
+  try {
+    const raw = localStorage.getItem(USER_STORAGE_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as User
+    return parsed?.userId ? parsed : null
+  } catch (error) {
+    console.error('Error getting stored user details:', error)
+    return null
+  }
+}
+
+/**
+ * Clear the stored user details from localStorage
+ */
+export function clearStoredUserDetails(): void {
+  try {
+    localStorage.removeItem(USER_STORAGE_KEY)
+  } catch (error) {
+    console.error('Error clearing stored user details:', error)
   }
 }

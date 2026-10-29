@@ -1,14 +1,24 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { StoreIcon, MapPin, Eye, PlayCircle } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import { onboardingService, taskService } from '../services/apiManager'
 import type { StoreWithMapping } from '../types/user-store'
 import type { SurveyWithStatus } from '../types/daily-survey'
 import toast from 'react-hot-toast'
+import PageHeader from '../components/PageHeader'
+import FilterSection from '../components/FilterSection'
+import FormSelect from '../components/ui/FormSelect'
+import FormField from '../components/ui/FormField'
+import { canStartSurvey } from '../utils/surveyPermission'
 
 const SurveyList: React.FC = () => {
   const { user } = useAuth()
   const navigate = useNavigate()
+
+  // Permission: only BM/ABM/ABM(OTL)/STL/OTL roles can start surveys.
+  // Others can only view surveys.
+  const userCanStartSurvey = canStartSurvey(user?.role?.roleName)
 
   // Stores
   const [stores, setStores] = useState<StoreWithMapping[]>([])
@@ -92,6 +102,12 @@ const SurveyList: React.FC = () => {
   const handleStartSurvey = async (survey: SurveyWithStatus) => {
     if (!user || !selectedStoreId) return
 
+    // Only allow starting survey for today's date
+    if (surveyDate !== today) {
+      toast.error('Surveys can only be started for today\'s date')
+      return
+    }
+
     try {
       const response = await taskService.createSurveySubmission({
         surveyId: survey.surveyId,
@@ -113,7 +129,10 @@ const SurveyList: React.FC = () => {
 
   // Handle continue survey
   const handleContinueSurvey = (dailySurveyId: number) => {
-    navigate(`/survey/${dailySurveyId}`)
+    // Allow viewing historical surveys, but only continue for today's date
+    navigate(`/survey/${dailySurveyId}`, { 
+      state: { viewOnly: surveyDate !== today }
+    })
   }
 
   // Get selected store details
@@ -148,82 +167,75 @@ const SurveyList: React.FC = () => {
     }
   }
 
-  // Render store selector
-  const renderStoreSelector = () => {
-    if (isLoadingStores) {
-      return (
-        <div className="flex justify-end">
-          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-primary"></div>
-        </div>
-      )
-    }
-
-    if (storesError) {
-      return (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-          <p className="text-destructive text-sm">{storesError}</p>
-        </div>
-      )
-    }
-
-    if (stores.length === 0) {
-      return <p className="text-muted-foreground text-sm">No active stores assigned to you.</p>
-    }
-
-    return (
-      <div className="flex flex-col gap-2">
-        <div className="flex items-center gap-3">
-          <label htmlFor="store-select" className="text-sm font-medium text-foreground whitespace-nowrap">
-            Store
-          </label>
-          <select
-            id="store-select"
-            value={selectedStoreId ?? ''}
-            onChange={(e) => setSelectedStoreId(Number(e.target.value))}
-            className="p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary min-w-[200px]"
-          >
-            {stores.map(({ store }) => (
-              <option key={store.storeId} value={store.storeId}>
-                {store.storeName} ({store.storeCode})
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {selectedStore && (
-          <div className="text-xs text-muted-foreground">
-            <p>{selectedStore.store.addressLine1}, {selectedStore.store.city}</p>
-          </div>
-        )}
-      </div>
-    )
-  }
-
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-bold">Daily Survey</h1>
-        <p className="text-muted-foreground mt-2">Select store and date to view surveys</p>
-      </div>
+      {/* Page header */}
+      <PageHeader
+        title="Daily Survey"
+        subtitle="Select store and date to view surveys"
+      />
 
-      {/* Filters */}
-      <div className="bg-card border border-border rounded-lg p-4 shadow-sm">
-        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-end">
-          <div className="flex-1 w-full sm:w-auto">
-            {renderStoreSelector()}
-          </div>
-          <div className="flex items-center gap-3 w-full sm:w-auto">
-            <label htmlFor="survey-date" className="text-sm font-medium text-foreground whitespace-nowrap">
-              Date
-            </label>
-            <input
-              id="survey-date"
-              type="date"
-              value={surveyDate}
-              onChange={(e) => setSurveyDate(e.target.value)}
-              className="p-2 border border-border rounded-lg bg-background text-foreground text-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary"
-            />
-          </div>
+      {/* Filters: Store + Date */}
+      <div className="bg-card rounded-xl border border-border">
+        <FilterSection title="Search Filters" />
+        <div className="p-4">
+          {isLoadingStores ? (
+            <div className="flex items-center justify-center py-8">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
+            </div>
+          ) : storesError ? (
+            <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
+              <p className="text-destructive text-sm">{storesError}</p>
+            </div>
+          ) : stores.length === 0 ? (
+            <p className="py-4 text-muted-foreground text-sm">No active stores assigned to you.</p>
+          ) : (
+            <>
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-4">
+                <FormSelect
+                  label="Store"
+                  name="selectedStoreId"
+                  value={selectedStoreId ?? ''}
+                  onChange={(e) => setSelectedStoreId(Number(e.target.value))}
+                  options={stores.map(({ store }) => ({
+                    value: store.storeId,
+                    label: `${store.storeName} (${store.storeCode})`,
+                  }))}
+                  placeholder="Select Store"
+                  required
+                />
+                <FormField
+                  label="Date"
+                  name="surveyDate"
+                  type="date"
+                  value={surveyDate}
+                  onChange={(e) => {
+                    // Do not allow future dates
+                    const selected = e.target.value
+                    if (selected && selected > today) {
+                      return
+                    }
+                    setSurveyDate(selected)
+                  }}
+                  max={today}
+                />
+              </div>
+
+              {/* Selected store details */}
+              {selectedStore && (
+                <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-1 rounded-xl bg-muted/50 px-4 py-2.5 text-xs text-muted-foreground">
+                  <span className="inline-flex items-center gap-1.5 font-semibold">
+                    <StoreIcon className="h-3.5 w-3.5 text-primary" />
+                    {selectedStore.store.storeName}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5">
+                    <MapPin className="h-3.5 w-3.5" />
+                    {[selectedStore.store.addressLine1, selectedStore.store.addressLine2, selectedStore.store.city, selectedStore.store.state, selectedStore.store.pinCode].filter(Boolean).join(', ')}
+                  </span>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
 
@@ -253,10 +265,10 @@ const SurveyList: React.FC = () => {
               key={survey.surveyId}
               className="bg-card border border-border rounded-lg p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col"
             >
-              <div className="flex-1">
-                <div className="flex items-start justify-between gap-2 mb-3">
+              <div className="flex-1 space-y-3">
+                <h3 className="text-md font-medium text-foreground">{survey.surveyName}</h3>
+                <div className="flex items-start justify-between gap-2">
                   <div>
-                    <h3 className="font-semibold text-foreground">{survey.surveyName}</h3>
                     {survey.surveyDays && survey.surveyDays.length > 0 && (
                       <div className="flex flex-wrap gap-1 mt-1">
                         {survey.surveyDays.map((day) => (
@@ -297,20 +309,39 @@ const SurveyList: React.FC = () => {
                 )}
               </div>
 
-              <div className="mt-auto pt-3 border-t border-border">
+              <div className="">
                 {!survey.dailySurveyId ? (
-                  <button
-                    onClick={() => handleStartSurvey(survey)}
-                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
-                  >
-                    Start Survey
-                  </button>
+                  userCanStartSurvey ? (
+                    <button
+                      onClick={() => handleStartSurvey(survey)}
+                      disabled={surveyDate !== today}
+                      className={`mt-6 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                        surveyDate === today
+                          ? 'bg-primary text-primary-foreground hover:bg-primary/90'
+                          : 'bg-muted text-muted-foreground cursor-not-allowed'
+                      }`}
+                      title={surveyDate !== today ? 'Surveys can only be started for today\'s date' : 'Start Survey'}
+                    >
+                      <PlayCircle className="h-4 w-4" />
+                      Start Survey
+                    </button>
+                  ) : (
+                    <button
+                      disabled
+                      className="mt-6 w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-muted text-muted-foreground rounded-lg text-sm font-medium cursor-not-allowed"
+                      title="Only BM, ABM, ABM(OTL), STL and OTL roles can start surveys"
+                    >
+                      <Eye className="h-4 w-4" />
+                      View Only
+                    </button>
+                  )
                 ) : (
                   <button
                     onClick={() => handleContinueSurvey(survey.dailySurveyId!)}
-                    className="w-full px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                    className="w-full inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
                   >
-                    Continue Survey
+                    <Eye className="h-4 w-4" />
+                    {surveyDate === today && userCanStartSurvey ? 'Continue Survey' : 'View Survey'}
                   </button>
                 )}
               </div>
